@@ -640,7 +640,7 @@ class DBSQLOperations:
             return connection.execute(sql)
 
     @classmethod
-    def Select(cls, connection, table_name, where, *where_vals, **params):
+    def Select(cls, connection, table_name, where=None, *where_vals, **params):
         sql = f"""
             SELECT
                 {params['columns'] if "columns" in params else '*'}
@@ -650,7 +650,7 @@ class DBSQLOperations:
             {params['append'] if 'append' in params else ""}
         """.strip()
 
-        if where_vals:
+        if where and where_vals:
             assert where_vals is not None, f"Where has ? but no arguments for {where}!"
             return connection.execute(sql, where_vals)
         else:
@@ -787,7 +787,7 @@ class DBCommonTable(DBDirtyRecordMixin):
         return cls._conn_.cursor
 
     @classmethod
-    def Select(cls, where, *args, **kwargs):
+    def Select(cls, where=None, *args, **kwargs):
         cursor = DBSQLOperations.Select(cls.DB(), cls._table_, where, *args, **kwargs)
         return DBCursorProxy(cls, cursor)
 
@@ -847,9 +847,17 @@ class DBCursorProxy:
 
         return self._factory(**row) if row is not None else None
 
-    def fetchmany(self, size=sqlite3.Cursor.arraysize) -> DBCommonTable:
-        for row in self._cursor.fetchmany(size):
-            yield self._factory(**row) if row is not None else None
+    def fetchmany(self) -> DBCommonTable:
+        # todo figure out why , size=sqlite3.Cursor.arraysize is a member descriptor (sign of a bad slots mixup)
+        rows = self._cursor.fetchmany()
+        while rows:
+            for row in rows:
+                if not row:
+                    break
+                yield self._factory(**row)
+            else:
+                rows = self._cursor.fetchmany()
+
 
     def fetchall(self) -> DBCommonTable:
         for row in self._cursor.fetchall():
@@ -857,6 +865,10 @@ class DBCursorProxy:
 
     def __getattr__(self, key):
         return getattr(self._cursor, key)
+
+    def __iter__(self):
+        for row in self.fetchmany():
+            yield row
 
 
 class TablesRegistry:
