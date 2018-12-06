@@ -6,7 +6,7 @@
 
 import pytest
 
-from json_catch import dcdb
+import dcdb
 
 from dataclasses import dataclass, fields, field
 
@@ -227,7 +227,6 @@ def test_Create_with_default_factory(connection):
 
 
     instance = connection.t.Test.Create()
-    raise Exception(instance.bar)
 
 
 def test_Create(conn2):
