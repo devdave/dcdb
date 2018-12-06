@@ -453,6 +453,15 @@ class DBConnection:
 
         return bound_class
 
+    def bind_scan(self, scope, ignore: list = None, create_table = True):
+        ignore = [] if ignore is None else ignore
+
+        for name in [name for name in dir(scope) if name.startswith("_") is False and name not in ignore]:
+            if inspect.isclass(getattr(scope, name, None)):
+                if(hasattr(getattr(scope, name, None), "__dataclass_fields__")):
+                    self.bind(getattr(scope, name, None), create_table=create_table)
+
+
     def handle(self):
         return self._conn_
 
