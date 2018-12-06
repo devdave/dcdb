@@ -1,2 +1,2 @@
 
-from dcdb import *
+from .dcdb import *
