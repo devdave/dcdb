@@ -479,6 +479,7 @@ class DBConnection:
 
 
 class DBRegisteredTable:
+    #TODO kill this off and or consolidate somehow
     __slots__ = ('connection', 'bound_cls', 'table_name', 'fields')
 
     def __init__(self, connection, bound_cls, table_name, fields):
