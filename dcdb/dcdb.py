@@ -87,7 +87,7 @@ def cast_to_database(value, value_type: type):
         retval = int(value)
     elif value_type in [str, int]:
         retval = value_type(value)
-    elif issubclass(value_type, AutoCast):
+    elif hasattr(value_type, "To"):
         retval = value_type.To(value)
     else:
         ex_msg = \
