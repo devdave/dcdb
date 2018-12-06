@@ -11,6 +11,8 @@ Welcome to DCDB's documentation!
    :caption: Contents:
 
 
+.. automodule:: dcdb.dcdb
+
 
 Indices and tables
 ==================

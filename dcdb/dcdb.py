@@ -1,24 +1,112 @@
 # pylint: disable=C0103
 """
+    ==============================
     DB DataClass abstraction layer
+    ==============================
 
     Version: Super Alpha
 
-
     turns
-    @dataclass
-    class Something:
-        name: str
-        age: int
 
-    into a sqlite table `Something` with columns name and age
+    .. code-block:: python
+
+        @dataclass
+        class Something:
+            name: str
+            age: int
+            species: str = "Human"
+
+    into
+
+    .. code-block:: sql
+
+        CREATE TABLE IF NOT EXISTS Something (
+            name TEXT NOT NULL,
+            age TEXT NOT NULL,
+            species TEXT DEFAULT VALUE Human
+        )
 
 
-    Style rules:
-        all variables are defined at the start of methods and functions to make it easier for a symbolic debugger
-            watch to catch the moment the variable is changed.
 
-        aggregate callables are not required for unit-testing but the calls they make MUST be tested.
+    Quick start
+    -----------
+
+    .. code-block:: python
+
+        import dcdb
+        from dataclasses import dataclass
+
+
+        @dataclass
+        class Something:
+            name: str
+            age: int
+            species: str = "Human"
+
+
+        connection = dcdb.DBConnection(":memory")
+        connection.bind(Something)
+        record = connection.tables.Something.Create(name="Bob", age="33", species="Code monkey")
+
+        #To fetch a record, you use pure SQL syntax to make the WHERE clause of a select
+        same_record = connection.tables.Something.Get("name=?", "Bob")
+
+        some_record.age = 13
+
+        #Note while record and some_record were the same record
+        record.update() # blows away the change to `.age`
+        #while
+        some_record.update() # would update age to 13
+
+
+
+    The record has been automatically inserted into the database with a `.id` property set to the relevant row in the
+    Something table.
+
+
+    Goals
+    -----
+        1. `dcdb` is meant to be a dirt-simple way of saving data to a sqlite table.   Some features, like Joins, are planned
+        but that is going to take a while.
+
+        2. `dcdb` makes no effort to prevent a user from shooting themselves in the foot.  If you grab two copies of the same
+        record, as pointed out above, you can lose data if you lose track of them.
+
+        3. No dsl's.   if you have to do `AND(MyColumn==1234, OtherColumn=="abc"))` or something crazier like
+        `(NOT(Foo, ILIKE(Bar, "w%"))` that is insane.  I have known SQL since the 90's and last thing I want is to learn
+        some other quasi-language dialect.
+            * Immediate consequence is a loss of compatibility.
+                MS SQL and MySQL may have SQL in their names but
+                both have some interesting quirks that make them not friends.
+
+
+    TODO
+    -----
+
+    1. Cleanup the structure of the package
+        * Remove RegisteredTable
+        * cut down on __getattr_ calls, if it takes more than one call to reach a resource, that is two much
+    2. Trim out repetitive parameters
+    3. Restore positional record/object creation
+    4. Restore transaction logic
+    5. Figureout to make AutoList less "goofy"
+    6. clean up the unit-tests, change naming to test_class/function_case_name
+        * Split tests apart and make them smaller
+        * Review and make classic unit test class's as appropriate
+
+
+    Current capabilities
+    --------------------
+    1. `.Create`
+    2. `.Select`
+        * alternatively `.Get` can be used to fetch a single record.
+    3. `.delete`
+    4. `.update`
+    5. SomeTable.[somechild] support through AutoList
+    6. other stuff
+
+
+
 """
 from __future__ import annotations
 
@@ -39,10 +127,11 @@ IntegrityError = sqlite3.IntegrityError
 
 def cast_from_database(value: object, value_type: type):
     """
+    Transformer which ensures that None is None, int is int, etc.
 
     :param value:
-    :param field:
-    :return:
+    :param value_type:
+    :return: value_type(value)
     """
 
     debug = value
@@ -76,7 +165,14 @@ def cast_from_database(value: object, value_type: type):
     return retval
 
 
-def cast_to_database(value, value_type: type):
+def cast_to_database(value, value_type: type) -> str:
+    """
+    Converts the basic types to something compatible with the database
+
+    :param value:
+    :param value_type:
+    :return str:
+    """
     debug = value
 
     if value is None:
@@ -103,18 +199,38 @@ def cast_to_database(value, value_type: type):
 
 
 class AutoCast(metaclass=abc.ABCMeta):
+    """
+    TODO deprecated
+
+    Originally meant as a stub for AutoCast'ed types.
+    """
     pass
 
 
 class AutoCastDict(AutoCast):
     """
+
+        Given::
+        @dataclass
+        class Foo:
+            flags: AutoCastDict = None
+
+        it converts `flags` to a pickled binary string and then back, allowing complex
+        dictionary objects to be saved and restored from the database.
+
+        -=======
+        Note
+        -=======
         Pickle is used vs json because
-        {1:"foo"} becomes {"1":"foo"} is a few cases
+        `{1:"foo"}` becomes `{"1":"foo"}`
 
         Why pickle versus JSON?
         1 becomes '1' when going from str to json
         https://bugs.python.org/issue32816
+
+        Supporting Dict->JSON->Dict is trivial and supported by making a JSON AutoCast compatible type.
     """
+    SUBTYPE = "BINARY"
 
     @classmethod
     def From(self, value):
@@ -585,8 +701,8 @@ class DBSQLOperations:
 
         # TODO find a better way to handle this
         if column_field.type not in type_map:
-            if issubclass(column_field.type, AutoCastDict):
-                sql_column = "TEXT"
+            if hasattr(column_field.type, "SUBTYPE"):
+                sql_column = column_field.type.SUBTYPE
                 default_value = find_default(column_field)
 
             elif issubclass(column_field.type, enum.Enum):
