@@ -9,6 +9,7 @@ import pytest
 import dcdb
 
 from dataclasses import dataclass, fields, field
+import enum
 
 #debug
 
@@ -76,6 +77,26 @@ def test_cast_to_database():
     assert isinstance(result, bytes)
     assert result == pickle.dumps(test_value)
 
+
+def test_cast_to_database_AND_cast_from_database_enum():
+
+    class Switch(enum.Enum):
+        OFF = 0
+        ON = 1
+
+        @classmethod
+        def To(cls, value):
+            return value.name
+
+        @classmethod
+        def From(cls, value):
+            return cls.__members__[value]
+
+
+    test = Switch.OFF
+    expected = "OFF"
+    actual = dcdb.cast_to_database(test, Switch)
+    assert expected == actual
 
 
 def test_tableregistry_mk_bound(connection):
@@ -518,6 +539,14 @@ def test_column_as_enum(connection):
         OFF = 0
         ON = 1
 
+        @classmethod
+        def To(cls, value):
+            return value.name
+
+        @classmethod
+        def From(cls, value):
+            return cls.__members__[value]
+
     @dataclass()
     class Test:
 
@@ -536,9 +565,17 @@ def test_column_as_enum(connection):
 def test_autolist(connection):
     import enum
 
-    class ChildTableStatus(enum.Enum):
+    class ChildTableStatus(enum.IntEnum):
         PENDING = 0
         COMPLETE = 1
+
+        @classmethod
+        def To(cls, value):
+            return value.value
+
+        @classmethod
+        def From(cls, value):
+            return cls(int(value))
 
     @dataclass()
     class Parent:
@@ -633,11 +670,11 @@ def main():
 
 
 
-
-    sys.path.append(pl.Path(__file__).resolve().parent)
+    my_path = pl.Path(__file__).resolve().parent
+    sys.path.append(str(my_path))
 
 
     pytest.main()
 
 if __name__ == "__main__":
-    main()
+     main()

@@ -376,6 +376,18 @@ class AutoList:
 
         self.__conditions = computed
 
+        return type(self)(
+            self.__parent_table,
+            self.__child_table,
+            self.__owner,
+            self.__conditions,
+            self.__orderby,
+            self.__rcreate,
+            self.__radd,
+            self.__rremove,
+            self.__cache
+        )
+
     def orderby(self, order_str):
         self.__orderby = order_str
 
