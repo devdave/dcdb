@@ -910,6 +910,9 @@ class DBCommonTable(DBDirtyRecordMixin):
         else:
             raise ValueError(f"No {key} in {self}")
 
+    def __str__(self):
+        return self._table_
+
     @classmethod
     def DB(cls):
         return cls._conn_.cursor
