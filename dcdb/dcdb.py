@@ -142,9 +142,9 @@ def cast_from_database(value: object, value_type: type):
     elif value is None:
         retval = None
 
-    elif issubclass(value_type, enum.Enum):
-        # TODO assuming using int flags
-        retval = value_type(int(value))
+    # elif issubclass(value_type, enum.Enum):
+    #     # TODO assuming using int flags
+    #     retval = value_type(int(value))
     elif value_type == str and isinstance(value, str):
         retval = value
     elif value_type in [int, str]:
@@ -177,8 +177,8 @@ def cast_to_database(value, value_type: type) -> str:
 
     if value is None:
         retval = None
-    elif issubclass(value_type, enum.Enum):
-        retval = value.value
+    # elif issubclass(value_type, enum.Enum):
+    #     retval = value.value
     elif value_type == bool:
         retval = int(value)
     elif value_type in [str, int]:
@@ -191,7 +191,7 @@ def cast_to_database(value, value_type: type) -> str:
                 f"Unable to transform {value_type!r} as returned from DB                     
                 value = {value!r} 
                 debug <= {debug!r} 
-                field = {field!r}
+                type = {value_type!r}
             """
         raise ValueError(ex_msg)
 
