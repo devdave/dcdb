@@ -975,16 +975,16 @@ class DBCursorProxy:
 
         return self._factory(**row) if row is not None else None
 
-    def fetchmany(self) -> DBCommonTable:
-        # todo figure out why , size=sqlite3.Cursor.arraysize is a member descriptor (sign of a bad slots mixup)
-        rows = self._cursor.fetchmany()
+    def fetchmany(self, size=100) -> DBCommonTable:
+        # todo figure out why , size=sqlite3.Cursor.arraysize is a member descriptor (sign of a bad slots somewhere)
+        rows = self._cursor.fetchmany(size)
         while rows:
             for row in rows:
-                if not row:
-                    break
                 yield self._factory(**row)
             else:
-                rows = self._cursor.fetchmany()
+                rows = self._cursor.fetchmany(size)
+                if not rows:
+                    return
 
 
     def fetchall(self) -> DBCommonTable:
