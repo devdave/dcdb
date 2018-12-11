@@ -309,6 +309,7 @@ class ProxyList(list):
 TableSpec = collections.namedtuple("TableSpec", "name, column")
 
 
+
 class AutoList:
     __slots__ = (
         "__parent_table",
@@ -345,6 +346,8 @@ class AutoList:
             else:
                 return self.term.format(parent=parent, child=child)
 
+
+
     def __init__(self, parent, child, owner=None, conditions=None, orderby=None, creator=None, adder=None,
                  remover=None, __cache=None):
 
@@ -363,7 +366,8 @@ class AutoList:
             self.__child_table = child
 
         self.__owner = owner
-        self.__conditions = conditions if conditions is not None else []
+        self.__conditions = conditions if conditions is not None \
+            else [self.Term(f"{self.__child_table.column}={{parent.{self.__parent_table.column}}}")]
         self.__orderby = orderby
         self.__rcreate = creator
         self.__radd = adder
@@ -393,7 +397,7 @@ class AutoList:
 
         # expr OP expr OP
         computed = []
-        for position, element in enumerate(self.__conditions[:] + new_conditions):
+        for position, element in enumerate(new_conditions):
             if position % 2 != 0:
                 if isinstance(element, self.Operator) is False:
                     computed.append(self.Operator("AND"))
