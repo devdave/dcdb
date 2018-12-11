@@ -1,13 +1,17 @@
 # dcdb
 
+
 Dataclass database library
 
-##status
+## status
+
+
 
 Heavily under development
 
 
-##Todo
+## Todo
+
 
 1. Joins    
 2. Transactions  
@@ -18,20 +22,24 @@ Heavily under development
 7. documentation
 
 
-#near plans
+## plans
+
 
 Swap out @dataclass for my own wrapper so that classes 
 are changed in place.
 
 
-#Warranty
+## Warranty
+
 
 There is no guarantee any of this will be compatible with future 
 projects as this is still transient
 
 
 
-#Usage
+## Usage
+
+
 ```python
 import dataclasses as dcs
 import dcdb
@@ -45,7 +53,7 @@ class MyWidget:
     created_on: int = dcdb.ColumnDef(python=None, database="TIMESTAMP DEFAULT (strftime('%s','now'))")
     
 
-conn = dcs.DBConnection(":memory:")
+conn = dcdb.DBConnection(":memory:")
 """
   Behind the scenes this creates a table
   
@@ -65,13 +73,15 @@ record = conn.t.MyWidget.Create(
     stuff={"hello":"world", 9:"This is pickled so numeric indexes are integers"}
     )
     
-my_record = conn.t.MyWidget.Select("name=?", "Bob")
+my_record = conn.t.MyWidget.Get("name=?", "Bob") # shortcut for `conn.t.MyWidget.Select("name=?", "Bob").first()`
+# my_record is DCDB_MyWidget(MyWidget, dcdb.DBCommonTable)
 
-assert my_record == record
+assert my_record is not None #No effort is made to warn a record wasn't found (eg throwing RecordNotFound or similar)
+assert my_record == record #Not necessary, just to show that dataclasses comparison logic is still functioning
 assert my_record.stuff == {"hello":"world", 9:"This is pickled so numeric indexes are integers"}
 
 record.delete()
-# Possible TODO my_record would still be valid
+# Note that my_record would still be valid and would undo the prior delete if update() or save() was called.
 
 
  
