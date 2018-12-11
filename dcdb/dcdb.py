@@ -372,43 +372,36 @@ class AutoList:
 
     def where(self, *joins):
 
-        computed = self.__conditions if self.__conditions else []
+
+
+
 
         str_operators = {"AND", "OR"}  # TODO add more
 
-        def single_term(term):
-            return lambda p, c: term.format(parent=p, child=c)
 
-        def multi_term(term, *arg):
-            return lambda parent, child: term[0].format(*term[1:], parent=parent, child=child)
-
-        operator_added = False
         new_conditions = []
-        for pos, term in enumerate(joins):
+        for term in joins:
 
-            term_len = len(term)
-            new_component = None
+            if isinstance(term, str):
+                if term.upper() in str_operators:
+                    new_conditions.append(self.Operator(term))
+                else:
+                    new_conditions.append(self.Term(term))
+            else:
+                assert isinstance(term, list), "Where conditions must be str, [format str ,str], or [format str, *objects]"
+                new_conditions.append(self.Term(term, is_multi=True))
 
-            if isinstance(term, str) is True:
-                operator_added = term in str_operators
-                new_component = single_term(term)
-
-            elif term_len == 2:
-                # "lvalue={0}", some_constant_value
-                new_component = multi_term(term[0], term[1])
-            elif term_len >= 3:
-                new_component = multi_term(term[0], *term[1:])
-
-            if pos != 0 and pos % 2 != 0 and operator_added is False:
-                # TODO a lot more unit-tests on this because of how goofy it feels
-                computed.append(lambda p, c: "AND")
-                operator_added = False
-
-            computed.append(new_component)
-
-        if len(computed) == 2:
-            # TODO a lot more unit-tests on this because of how goofy it feels
-            computed = computed[:1]
+        # expr OP expr OP
+        computed = []
+        for position, element in enumerate(self.__conditions[:] + new_conditions):
+            if position % 2 != 0:
+                if isinstance(element, self.Operator) is False:
+                    computed.append(self.Operator("AND"))
+                    computed.append(element)
+                else:
+                    computed.append(element)
+            else:
+                computed.append(element)
 
         self.__conditions = computed
 
