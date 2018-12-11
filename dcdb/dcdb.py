@@ -362,10 +362,8 @@ class AutoList:
         elif isinstance(child, TableSpec):
             self.__child_table = child
 
-        self.where("{self.__parent_table[0]}.{self.__parent_table[1]}={self.__child_table[0]}.{{self.__child_table[1]}}")
-
         self.__owner = owner
-        self.__conditions = conditions
+        self.__conditions = conditions if conditions is not None else []
         self.__orderby = orderby
         self.__rcreate = creator
         self.__radd = adder
