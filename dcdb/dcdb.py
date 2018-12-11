@@ -323,6 +323,28 @@ class AutoList:
         "__rremove",
         "__cache")
 
+    class Operator:
+        __slots__ = ("op_str",)
+
+        def __init__(self, op_str):
+            self.op_str = op_str
+
+        def __call__(self, *args, **kwargs):
+            return self.op_str
+
+    class Term:
+        __slots__ = ("term", "is_multi")
+
+        def __init__(self, term, is_multi=False):
+            self.term = term
+            self.is_multi = is_multi
+
+        def __call__(self, parent, child):
+            if self.is_multi:
+                return self.term[0].format(*self.term[1:], parent=parent, child=child)
+            else:
+                return self.term.format(parent=parent, child=child)
+
     def __init__(self, parent, child, owner=None, conditions=None, orderby=None, creator=None, adder=None,
                  remover=None, __cache=None):
 
