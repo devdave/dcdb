@@ -562,7 +562,7 @@ def test_column_as_enum(connection):
 
 
 
-def test_autolist(connection):
+def test_AutoList_full(connection):
     import enum
 
     class ChildTableStatus(enum.IntEnum):
@@ -661,6 +661,29 @@ def test_autolist(connection):
     assert len(bob.Complete) == 2
 
 
+def test_AutoList_dotted_relations(connection):
+
+    @dataclass()
+    class Boss:
+        name: str
+        employees = dcdb.AutoList("Boss.id", "Employee.boss_id")
+
+    @dataclass()
+    class Employee:
+        name:str
+        age:int
+        boss_id:int = None
+
+    connection.bind_scan(locals())
+
+    boss = connection.t.Boss.Create(name="Bill")
+
+    emp1 = connection.t.Employee.Create(name="Joe",age=12)
+    emp2 = connection.t.Employee.Create(name="Al", age=22)
+    emp3 = connection.t.Employee.Create(name="Jane", age=30)
+    emp4 = connection.t.Employee.Create(name="Friday",age=28)
+
+    boss.employees.add(emp1, emp2, emp4)
 
 
 

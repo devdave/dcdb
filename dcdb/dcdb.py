@@ -118,8 +118,11 @@ import pickle
 import abc  # TODO is this needed?
 import collections
 import enum
-
 import inspect
+import logging
+
+
+LOG = logging.getLogger(__name__)
 
 # Avoid application code from having to import sqlite3
 IntegrityError = sqlite3.IntegrityError
@@ -133,21 +136,18 @@ def cast_from_database(value: object, value_type: type):
     :param value_type:
     :return: value_type(value)
     """
-
+    LOG.debug(f"vale: {value!r}, value_type: {value_type!r}")
     debug = value
 
     if value == "None":
         # TODO figure out how/why this is possible
+        raise RuntimeError("None was cast as 'None' previously.  Date integrity issue detected.")
         retval = None
     elif value is None:
         retval = None
-
-    # elif issubclass(value_type, enum.Enum):
-    #     # TODO assuming using int flags
-    #     retval = value_type(int(value))
     elif value_type == str and isinstance(value, str):
         retval = value
-    elif value_type in [int, str]:
+    elif value_type in [int, str, float]:
         retval = value_type(value)
     elif value_type == bool:
         retval = bool(int(value))
@@ -158,7 +158,7 @@ def cast_from_database(value: object, value_type: type):
             f"Unable to transform {value_type!r} as returned from DB             
             value = {value!r} 
             debug <= {debug!r} 
-            field = {field!r}"
+            field = {value_type!r}"
         """
         raise ValueError(ex_msg)
 
@@ -173,16 +173,17 @@ def cast_to_database(value, value_type: type) -> str:
     :param value_type:
     :return str:
     """
+    LOG.debug(f"vale: {value!r}, value_type: {value_type!r}")
     debug = value
 
     if value is None:
         retval = None
-    # elif issubclass(value_type, enum.Enum):
-    #     retval = value.value
     elif value_type == bool:
         retval = int(value)
     elif value_type in [str, int]:
         retval = value_type(value)
+    elif value_type == float:
+        retval = str(value)
     elif hasattr(value_type, "To"):
         retval = value_type.To(value)
     else:
@@ -293,7 +294,7 @@ class ProxyList(list):
         self.owner = owner
 
     def __call__(self, *args, **kwargs) -> DBCommonTable:
-        print(*args, **kwargs)
+        LOG.debug(f"{args|r} {kwargs|r}")
         return self.auto_list.create(self.owner, *args, **kwargs)
 
     def add(self, *records: DBCommonTable) -> DBCommonTable:
@@ -322,11 +323,24 @@ class AutoList:
         "__rremove",
         "__cache")
 
-    def __init__(self, parent_table, child_table, owner=None, conditions=None, orderby=None, creator=None, adder=None,
+    def __init__(self, parent, child, owner=None, conditions=None, orderby=None, creator=None, adder=None,
                  remover=None, __cache=None):
 
-        self.__parent_table = TableSpec(*parent_table) if not isinstance(parent_table, TableSpec) else parent_table
-        self.__child_table = TableSpec(*child_table) if not isinstance(child_table, TableSpec) else child_table
+        if isinstance(parent, list):
+            self.__parent_table = TableSpec(parent[0], parent[1])
+        elif isinstance(parent, str):
+            self.__parent_table = TableSpec(*parent.split("."))
+        elif isinstance(parent, TableSpec):
+            self.__parent_table = parent
+
+        if isinstance(child, list):
+            self.__child_table = TableSpec(child[0], child[1])
+        elif isinstance(child , str):
+            self.__child_table = TableSpec(*child.split("."))
+        elif isinstance(child, TableSpec):
+            self.__child_table = child
+
+        self.where("{self.__parent_table[0]}.{self.__parent_table[1]}={self.__child_table[0]}.{{self.__child_table[1]}}")
 
         self.__owner = owner
         self.__conditions = conditions
@@ -338,16 +352,18 @@ class AutoList:
 
     def where(self, *joins):
 
-        computed = []
+        computed = self.__conditions if self.__conditions else []
+
         str_operators = {"AND", "OR"}  # TODO add more
 
         def single_term(term):
             return lambda p, c: term.format(parent=p, child=c)
 
-        def multi_term(sql, *arg):
+        def multi_term(term, *arg):
             return lambda parent, child: term[0].format(*term[1:], parent=parent, child=child)
 
         operator_added = False
+        new_conditions = []
         for pos, term in enumerate(joins):
 
             term_len = len(term)
@@ -478,11 +494,9 @@ class AutoList:
 
 @dcs.dataclass
 class ColumnDef:
-    """
-        TODO make ABC interface?
-    """
-    python: object
+
     database: str
+    python: object = None
 
     def From(self, intermediate):
         return intermediate
@@ -584,10 +598,12 @@ class DBConnection:
     def bind_scan(self, scope, ignore: list = None, create_table = True):
         ignore = [] if ignore is None else ignore
 
-        for name in [name for name in dir(scope) if name.startswith("_") is False and name not in ignore]:
-            if inspect.isclass(getattr(scope, name, None)):
-                if(hasattr(getattr(scope, name, None), "__dataclass_fields__")):
-                    self.bind(getattr(scope, name, None), create_table=create_table)
+        for name, val in scope.items():
+            if name in ignore: continue
+            if name.startswith("_"): continue
+            if inspect.isclass(val):
+                if(hasattr(val, "__dataclass_fields__")):
+                    self.bind(val, create_table=create_table)
 
 
     def handle(self):
@@ -758,8 +774,11 @@ class DBSQLOperations:
                    ]
             sql = " ".join(sql).strip()
 
-            values = [cast_to_database(cf_value, dc_fields[cf_name].type) for cf_name, cf_value in
-                      column_fields.items()]
+            try:
+                values = [cast_to_database(cf_value, dc_fields[cf_name].type) for cf_name, cf_value in
+                          column_fields.items()]
+            except KeyError as ex:
+                raise RuntimeError(f"Missing column/{ex} - perhaps a typo?")
 
             return connection.execute(sql, values)
 
