@@ -1123,10 +1123,15 @@ class TablesRegistry:
 
     def ioc_assignments(self, db_cls: DBCommonTable, source_cls, name, db_cls_fields) -> DBCommonTable:
 
-        setattr(db_cls, "_conn_", self._connection)
-        setattr(db_cls, "_table_", name)
-        setattr(db_cls, "_original_", source_cls)
-        setattr(db_cls, "_fields_", {f.name: f for f in db_cls_fields})
+
+        def set_default(name, value):
+            if getattr(db_cls, name, None) is None:
+                setattr(db_cls, name, value)
+
+        set_default("_conn_", self._connection)
+        set_default("_table_", name)
+        set_default("_original_", source_cls)
+        set_default("_fields_", {f.name: f for f in db_cls_fields})
 
         return db_cls
 
