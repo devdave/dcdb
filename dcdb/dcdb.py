@@ -612,7 +612,24 @@ class DBConnection:
 
         return bound_class
 
-    def bind_scan(self, scope, ignore: list = None, create_table = True):
+    def bind_scan(self, scope, ignore: list = None, create_table = True) -> None:
+        """
+            Convenience helper to bind every dataclass in the provided scope object to
+            the current connection.
+
+            ####
+            NOTE!
+            ####
+
+            It is important to note that "every" is every dataclass will have SQL tables created on
+            the connection.   This can pollute a database with tables it doesn't need and are never
+            used.
+
+        :param scope: A dictionary or module object
+        :param ignore: A list (or better a set) of class names to ignore when binding the contents of scope
+        :param create_table: Should tables be created (if not exists) for each bound dataclass
+        :return:  None
+        """
         ignore = [] if ignore is None else ignore
 
         for name, val in scope.__dict__.items():
