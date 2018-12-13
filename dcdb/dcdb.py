@@ -615,7 +615,7 @@ class DBConnection:
     def bind_scan(self, scope, ignore: list = None, create_table = True):
         ignore = [] if ignore is None else ignore
 
-        for name, val in scope.items():
+        for name, val in scope.__dict__.items():
             if name in ignore: continue
             if name.startswith("_"): continue
             if inspect.isclass(val):
