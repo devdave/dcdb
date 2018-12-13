@@ -3,9 +3,25 @@
 
 Dataclass database library
 
+## Why another ORM?
+
+I know SQL and have worked with it since the 90's.  I like having the convenience
+of having an object transformed form/to a SQL storage engine but I also don't
+like having to learn a new pseudo language over and over.
+
+Using dataclass as the container with minimal instrumentation also makes it slightly 
+easier to cut down on the amount of work behind the scenes.  As best as possible I want
+a wysiwyg interaction.  If I bind a class Foo to the DB, it is stored in the database as
+Foo.
+
+Lastly, with the transformers relying on capability checking: does a type have a `From` and `To` method vs isinstance(SomeCustomType) 
+there is less code to write upfront.
+
+The first and immediate loss is with compatibility.  DCDB is written for sqlite and not another
+SQL engine like MySQL, MSSQL, or MySQL.   All of the latter engines may have `SQL` in their
+names but they have features and ways of doing the samething that is different (eg Triggers ).
+
 ## status
-
-
 
 Heavily under development
 
