@@ -637,9 +637,8 @@ class DBConnection:
             if name in ignore: continue
             if name.startswith("_"): continue
             if inspect.isclass(val):
-                if(hasattr(val, "__dataclass_fields__")):
+                if hasattr(val, "__dataclass_fields__"):
                     self.bind(val, create_table=create_table)
-
 
     def handle(self):
         return self._conn_
