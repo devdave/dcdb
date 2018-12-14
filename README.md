@@ -83,7 +83,7 @@ conn = dcdb.DBConnection(":memory:")
 """
 conn.bind(MyWidget)
 
-record = conn.t.MyWidget.Create(
+record = conn.t.MyWidget(
     name="Bob", 
     foo=123, 
     stuff={"hello":"world", 9:"This is pickled so numeric indexes are integers"}
