@@ -671,12 +671,10 @@ class DBRegisteredTable:
 
     def __call__(self, *args, **kwargs):
         if "id" not in kwargs:
-            return self.bound_cls(None, *args, **kwargs)
+            return self.bound_cls.Create(*args, **kwargs)
         else:
             return self.bound_cls(*args, **kwargs)
 
-    def Insert(self, **kwargs):
-        return self.bound_cls.Create(**kwargs)
 
     def Insert_many(self, *column_sets):
         collection = []

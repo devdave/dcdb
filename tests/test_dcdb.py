@@ -210,9 +210,9 @@ def test_Insert(conn2):
 
 
     with pytest.raises(dcdb.IntegrityError):
-        conn2.t.Widget.Insert(name="Bob", age=55)
+        conn2.t.Widget(name="Bob", age=55)
 
-    conn2.t.Widget.Insert(name="Bob", age=55, panacea=False)
+    conn2.t.Widget(name="Bob", age=55, panacea=False)
     row = conn2.execute("SELECT * FROM Widget LIMIT 1").fetchone()
 
     assert row['name'] == "Bob"
@@ -287,7 +287,7 @@ def test_Insert_Select_Get(conn2):
     MyWidget = conn2.t.Widget
     MyWidgetClass = MyWidget.bound_cls
 
-    MyWidget.Insert(name="Bob", age=44, panacea=False)
+    MyWidget(name="Bob", age=44, panacea=False)
 
     record = MyWidget.Select("name=?", "Bob").fetchone()
 
@@ -306,11 +306,15 @@ def test_Insert_Select_Get(conn2):
 def test_update_Update(conn2):
     conn2.bind(Widget)
 
-    record = conn2.t.Widget.Insert(id=10, name="Joe", age=22, panacea=True)
+    # TODO should I consider it a problem that setting id skips saving the actual record?
+    #  record = conn2.t.Widget(id=10, name="Joe", age=22, panacea=True)
+    record = conn2.t.Widget(name="Joe", age=22, panacea=True)
     assert record.name == "Joe"
     assert record.age == 22
     assert record.panacea is True
+    record.save()
 
+    records = [r for r in conn2.execute("SELECT * FROM Widget").fetchall()]
     record.panacea = False
     record.age = 33
     record.update()
@@ -324,11 +328,11 @@ def test_update_Update(conn2):
 def test_bulk_update(conn2):
 
     # Populate the db
-    conn2.t.Widget.Insert(name="Bob", age=13, panacea=True)
-    conn2.t.Widget.Insert(name="Joe", age=22, panacea=True)
-    conn2.t.Widget.Insert(name="Sue", age=34, panacea=True)
-    conn2.t.Widget.Insert(name="Mary", age=44, panacea=True)
-    conn2.t.Widget.Insert(name="It", age=9999, panacea=True)
+    conn2.t.Widget(name="Bob", age=13, panacea=True)
+    conn2.t.Widget(name="Joe", age=22, panacea=True)
+    conn2.t.Widget(name="Sue", age=34, panacea=True)
+    conn2.t.Widget(name="Mary", age=44, panacea=True)
+    conn2.t.Widget(name="It", age=9999, panacea=True)
 
     # Bulk update roughly half
     cursor = conn2.t.Widget.Update(["age<?", 35], panacea=False)
@@ -362,15 +366,15 @@ def test_DBTable_handles_dicttype(connection):
     test_value = {"a":1, 2:"b", "three":"c"}
     # expected =   {"a":1, 2:"b", "three":"c"}
 
-    record = connection.t.Foo.Insert(bar=test_value, name="Test thing")
+    record = connection.t.Foo(bar=test_value, name="Test thing")
 
     assert record.bar == test_value, repr(record.bar)
 
-    record2 = connection.t.Bar.Insert(name="Bob")
+    record2 = connection.t.Bar(name="Bob")
 
     assert record2.blank == None
 
-    record3 = connection.t.Bar.Insert(name="Bob", blank=test_value)
+    record3 = connection.t.Bar(name="Bob", blank=test_value)
 
     assert record3.blank == test_value
 
@@ -396,7 +400,7 @@ def test_table_direct_children(connection):
 
 
         def create_new_child(self):
-            child = self.tables.Child.Insert(parent_id=self.id)
+            child = self.tables.Child(parent_id=self.id)
             child.update()
             return child
 
@@ -418,7 +422,7 @@ def test_table_direct_children(connection):
     MyParent = connection.bind(Parent)
     MyChild = connection.bind(Child)
 
-    bob = connection.t.Parent.Insert(name="Bob")
+    bob = connection.t.Parent(name="Bob")
     bob.create_new_child()
     bob.create_new_child()
     bob.create_new_child()
@@ -453,8 +457,8 @@ def test_autoselect_property(connection):
 
     connection.binds(Foo, Bar)
 
-    parent_record = connection.t.Foo.Insert(name="Bert", some_num=1234)
-    child_record = connection.t.Bar.Insert(name="Brad", other_num=56)
+    parent_record = connection.t.Foo(name="Bert", some_num=1234)
+    child_record = connection.t.Bar(name="Brad", other_num=56)
 
     child_record.parent = parent_record
     child_record.update()
@@ -477,7 +481,7 @@ def test_error_columns_mismatch(conn2):
         name: str
 
     conn2.bind(OtherWidget)
-    thingamajig = conn2.t.OtherWidget.Insert(name="Thinga 2000", length=10, height=1, weight=8)
+    thingamajig = conn2.t.OtherWidget(name="Thinga 2000", length=10, height=1, weight=8)
     assert thingamajig.name == "Thinga 2000"
     assert thingamajig.length == 10
     assert thingamajig.height == 1
@@ -495,8 +499,8 @@ def test_mutation_tracking(conn2:dcdb.DBConnection):
         name:str
 
     conn2.bind(OtherWidget)
-    bob = conn2.t.Widget.Insert(name="Bob", age=44, panacea=False)
-    thingamajig = conn2.t.OtherWidget.Insert(name="Thinga 2000", length=10, height=1, weight=8)
+    bob = conn2.t.Widget(name="Bob", age=44, panacea=False)
+    thingamajig = conn2.t.OtherWidget(name="Thinga 2000", length=10, height=1, weight=8)
 
     assert bob._is_dirty is False
     assert thingamajig._is_dirty is False
@@ -554,9 +558,9 @@ def test_column_as_enum(connection):
 
 
     connection.bind(Test)
-    default_record = connection.t.Test.Insert()
-    off_record = connection.t.Test.Insert(enum_column=EnumFlags.OFF)
-    on_record = connection.t.Test.Insert(enum_column=EnumFlags.ON)
+    default_record = connection.t.Test()
+    off_record = connection.t.Test(enum_column=EnumFlags.OFF)
+    on_record = connection.t.Test(enum_column=EnumFlags.ON)
 
 
 
@@ -640,7 +644,7 @@ def test_AutoList_full(connection):
     )
 
 
-    bob = connection.t.Parent.Insert(name="Bob")
+    bob = connection.t.Parent(name="Bob")
 
     completed_count = connection.t.Children.Count("status=?", ChildTableStatus.COMPLETE.value)
     pending_count = connection.t.Children.Count("status=?", ChildTableStatus.PENDING.value)
