@@ -81,12 +81,10 @@ def test_cast_to_database_AND_autocastdict___works():
     colors_field = fields(Foo)[0]
     result = dcdb.cast_to_database(test_value, colors_field.type)
     assert isinstance(result, bytes)
-    assert 1 in result
-    assert "1" not in result
     assert result == pickle.dumps(test_value)
 
 
-def test_cast_to_database_AND_cast_from_database_enum():
+def test_cast_to_database():
 
     class Switch(enum.Enum):
         OFF = 0
@@ -141,8 +139,10 @@ def test_boundclass_ishashable(conn2):
 
     x = conn2.t.Widget(name="Bob", age=10, panacea=True)
     y = conn2.t.Widget(name="Alive", age=12, panacea=False)
+    x2 = conn2.t.Widget.Get("name=?", "Bob")
     assert (y == x) is False
     assert (x == x) is True
+    assert (x == x2) is True
     records = set()
     assert x.__hash__ is not None
     records.add(x)
