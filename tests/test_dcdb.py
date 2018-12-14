@@ -22,7 +22,12 @@ def connection():
     return dcdb.DBConnection(":memory:")
 
 @pytest.fixture()
-def conn2(connection):
+def conn2(connection:dcdb.DBConnection):
+    """
+
+    :param connection: dcdb.DBConnection uses the connection fixture
+    :return:
+    """
 
     @dataclass()
     class Widget:
@@ -42,7 +47,7 @@ class Widget:
     panacea: bool = False #in retrospect this makes no sense but I am just going to keep using this word
 
 
-def test_cast_to_database_type_error():
+def test_cast_to_database_type__fix_ordering_error():
     """
     Odd test but written to isolate a bug
 
@@ -54,13 +59,14 @@ def test_cast_to_database_type_error():
     assert value == result
 
 
-def test_connection_connects():
+def test_dbconnection___connects():
     my_conn = dcdb.DBConnection(":memory:")
-    my_conn.handle().execute("SELECT 1=1")
+    result = my_conn.handle().execute("SELECT 1=1").fetchone()
+    assert result[0] == 1
 
 
 
-def test_cast_to_database():
+def test_cast_to_database_AND_autocastdict___works():
 
     import pickle
 
@@ -75,6 +81,8 @@ def test_cast_to_database():
     colors_field = fields(Foo)[0]
     result = dcdb.cast_to_database(test_value, colors_field.type)
     assert isinstance(result, bytes)
+    assert 1 in result
+    assert "1" not in result
     assert result == pickle.dumps(test_value)
 
 
