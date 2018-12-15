@@ -120,6 +120,7 @@ import collections
 import enum
 import inspect
 import logging
+import weakref
 
 
 LOG = logging.getLogger(__name__)
@@ -269,10 +270,10 @@ class AutoSelect(AutoCast):
         if fk_id is None:
             # TODO abuse some sort of proxy class to catch owner.autoselect_property.Create to auto assign
             # to this autoselect
-            return owner._conn_.t[self.__target_table]
+            return owner._meta_.connection.t[self.__target_table]
 
         if self.__target is None:
-            self.__target = owner._conn_.t[self.__target_table].Get(f"{self.__target_column}=?", fk_id)
+            self.__target = owner._meta_.connection.t[self.__target_table].Get(f"{self.__target_column}=?", fk_id)
 
         return self.__target
 
@@ -568,7 +569,7 @@ class DBConnection:
         del self.t
         del self.registry
         del self._dirty_records
-        self._conn_.close()
+        self._meta_.connection.close()
 
     def _dirty_record_track_changes(self, flag: bool):
         self._dirty_records_track_changes = flag
@@ -608,7 +609,7 @@ class DBConnection:
         bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
 
         if create_table:
-            DBSQLOperations.Create_table(self, bound_class, bound_class._table_)
+            DBSQLOperations.Create_table(self, bound_class, bound_class._meta_.name)
 
         return bound_class
 
@@ -653,7 +654,7 @@ class DBConnection:
 
     @property
     def execute(self):
-        return self.cursor.execute
+        return self._conn_.cursor().execute
 
 
 class DBRegisteredTable:
@@ -670,6 +671,7 @@ class DBRegisteredTable:
         return getattr(self.bound_cls, item)
 
     def __call__(self, *args, **kwargs):
+        #TODO, profile this to see how the unit tests are using it.
         if "id" not in kwargs:
             return self.bound_cls.Create(*args, **kwargs)
         else:
@@ -702,6 +704,9 @@ class DBRegisteredTable:
 
 
 class DBSQLOperations:
+    """
+        Placeholder for a DB driver for other sqlite API's or even for other SQL services.
+    """
 
     @classmethod
     def Create_table(cls, connection, table_cls, table_name, safeguard_if_not_exists: bool = True):
@@ -885,6 +890,23 @@ class DBSQLOperations:
         else:
             return connection.execute(sql)
 
+    @classmethod
+    def CreateIndex(cls, connection, table_name, index_fields, index_name = None, is_unique=True):
+        SQL = ['CREATE']
+        if is_unique is True:
+            SQL.append('UNIQUE')
+
+        SQL.append('INDEX')
+
+        if index_name is None:
+            index_name = "idx_" + "_".join([field[:4] for field in index_fields])
+
+        SQL.append(f"ON {table_name}")
+        SQL.append(f"({','.join(index_fields)})")
+        SQL = " ".join(SQL)
+        return connection.execute(SQL)
+
+
 
 class DBDirtyRecordMixin:
 
@@ -912,16 +934,28 @@ class DBDirtyRecordMixin:
         return self._dirty_record
 
     def _set_dirty(self):
-        if self._conn_._dirty_record_add(self):
+        if self._meta_.connection._dirty_record_add(self):
             object.__setattr__(self, "_dirty_record", True)
 
     def _dirty_reset(self):
-        self._conn_._dirty_record_remove(self)
+        self._meta_.connection._dirty_record_remove(self)
         object.__setattr__(self, "_dirty_record", False)
 
     def __setattr__(self, key, value):
         self._set_dirty()
         object.__setattr__(self, key, value)
+
+
+class DBMeta:
+    __slots__ = ("connection", "name", "fields", "indexes")
+
+
+    def __init__(self, connection, name, fields, indexes):
+        self.connection = weakref.proxy(connection)
+        self.name = name
+        self.fields = fields
+        self.indexes = indexes
+
 
 
 @dcs.dataclass
@@ -937,10 +971,10 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     def __post_init__(self):
 
-        self.tables = self._conn_.tables
+        self.tables = self._meta_.connection.tables
 
         # Post processing to convert from DB to Application
-        for field in self._fields_.values():
+        for field in self._meta_.fields.values():
             if field.name == "id": continue
 
             # avoid mutation tracking as much as possible
@@ -952,25 +986,25 @@ class DBCommonTable(DBDirtyRecordMixin):
         self._init_dirty_record_tracking_()
 
     def __setitem__(self, key, value):
-        if key in self._fields_:
+        if key in self._meta_.fields:
             setattr(self, key, value)
 
     def __getitem__(self, key):
-        if key in self._fields_:
+        if key in self._meta_.fields:
             return getattr(self, key)
         else:
             raise ValueError(f"No {key} in {self}")
 
     def __str__(self):
-        return self._table_
+        return self._meta_.name
 
     @classmethod
     def DB(cls):
-        return cls._conn_.cursor
+        return cls._meta_.connection.cursor
 
     @classmethod
     def Select(cls, where=None, *args, **kwargs):
-        cursor = DBSQLOperations.Select(cls.DB(), cls._table_, where, *args, **kwargs)
+        cursor = DBSQLOperations.Select(cls.DB(), cls._meta_.name, where, *args, **kwargs)
         return DBCursorProxy(cls, cursor)
 
     @classmethod
@@ -979,12 +1013,12 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     @classmethod
     def Create(cls, **kwargs):
-        cursor = DBSQLOperations.Insert(cls.DB(), cls._table_, cls._fields_, **kwargs)
-        cursor = DBSQLOperations.Select(cls.DB(), cls._table_, f"id={cursor.lastrowid}")
+        cursor = DBSQLOperations.Insert(cls.DB(), cls._meta_.name, cls._meta_.fields, **kwargs)
+        cursor = DBSQLOperations.Select(cls.DB(), cls._meta_.name, f"id={cursor.lastrowid}")
         return DBCursorProxy(cls, cursor).fetchone()
 
     def delete(self):
-        cursor = DBSQLOperations.Delete(self._conn_, self._table_, f"id={self.id}")
+        cursor = DBSQLOperations.Delete(self._meta_.connection, self._meta_.name, f"id={self.id}")
 
         for field in dcs.fields(self):
             setattr(self, field.name, None)
@@ -997,9 +1031,9 @@ class DBCommonTable(DBDirtyRecordMixin):
         retval = None
 
         if rec_id is not None:
-            retval = DBSQLOperations.Update(self._conn_, self._table_, self._fields_, f"id={rec_id}", **values)
+            retval = DBSQLOperations.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
         else:
-            retval = DBSQLOperations.Insert(self._conn_, self._table_, self._fields_, **values)
+            retval = DBSQLOperations.Insert(self._meta_.connection, self._meta_.name, self._meta_.fields, **values)
             self.id = retval.lastrowid
 
         self._dirty_reset()
@@ -1007,7 +1041,7 @@ class DBCommonTable(DBDirtyRecordMixin):
     def update(self):
         values = dcs.asdict(self)
         rec_id = values.pop("id")
-        cursor = DBSQLOperations.Update(self._conn_, self._table_, self._fields_, f"id={rec_id}", **values)
+        cursor = DBSQLOperations.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
         self._dirty_reset()
         return cursor.rowcount == 1
 
@@ -1107,7 +1141,7 @@ class TablesRegistry:
         setattr(db_cls, "__hash__", lambda instance: hash(id(instance)))
         db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields)
 
-        self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._fields_)
+        self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._meta_.fields)
         return db_cls
 
     def generate_slotted_dcdb(self, db_cls: DBCommonTable):
@@ -1143,10 +1177,13 @@ class TablesRegistry:
             if getattr(db_cls, name, None) is None:
                 setattr(db_cls, name, value)
 
-        set_default("_conn_", self._connection)
-        set_default("_table_", name)
+        fields = {f.name: f for f in db_cls_fields}
+        set_default("_meta_", DBMeta(self._connection, name, fields, {}))
+        # set_default("_conn_", self._connection)
+        # set_default("_table_", name)
+        # set_default("_fields_", fields)
         set_default("_original_", source_cls)
-        set_default("_fields_", {f.name: f for f in db_cls_fields})
+
 
         return db_cls
 
