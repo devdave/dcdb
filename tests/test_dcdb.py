@@ -387,6 +387,32 @@ def test_DBTable_handles_dicttype(connection):
     assert record3.blank == test_value
 
 
+def test_DBCommonTable_hashing_equals(conn2):
+
+    record1 = conn2.t.Widget(name="Alice", age=35, panacea=False)
+    record2 = conn2.t.Widget.Get("name=?", "Alice")
+    record3 = conn2.t.Widget.Get("age=?", 35)
+    assert record1.id == record2.id
+    assert record1 == record2
+    assert record2 == record3
+    assert record3 == record1
+
+    @dataclass()
+    class Foo:
+        height:int
+        width:int
+
+    conn2.bind(Foo)
+    record4 = conn2.t.Foo(height=12, width=22)
+    record5 = conn2.t.Foo.Get("height=?",12)
+    record6 = conn2.t.Foo.Get("width=?", 22)
+    assert record4 != record1
+    assert record5 != record2
+    assert record6 != record3
+    assert record6 == record4
+    assert record4 == record5
+    assert record5 != record3
+
 
 
 def test_table_registry(connection):
