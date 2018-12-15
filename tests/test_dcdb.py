@@ -47,7 +47,7 @@ class Widget:
     panacea: bool = False #in retrospect this makes no sense but I am just going to keep using this word
 
 
-def test_cast_to_database_type__fix_ordering_error():
+def test_dcdb_cast_to_database_type__fix_ordering_error():
     """
     Odd test but written to isolate a bug
 
@@ -66,7 +66,7 @@ def test_dbconnection___connects():
 
 
 
-def test_cast_to_database_AND_autocastdict___works():
+def test_dcdb_cast_to_database_AND_autocastdict___works():
 
     import pickle
 
@@ -84,7 +84,7 @@ def test_cast_to_database_AND_autocastdict___works():
     assert result == pickle.dumps(test_value)
 
 
-def test_cast_to_database():
+def test_dcdb_cast_to_database():
 
     class Switch(enum.Enum):
         OFF = 0
@@ -135,7 +135,7 @@ def test_tableregistry_mk_bound(connection):
     assert rows[3]['name'] == "panacea"
     assert rows[2]['type'] == "INTEGER"
 
-def test_boundclass_ishashable(conn2):
+def test_dbcommontable_ishashable(conn2):
 
     x = conn2.t.Widget(name="Bob", age=10, panacea=True)
     y = conn2.t.Widget(name="Alive", age=12, panacea=False)
@@ -148,7 +148,7 @@ def test_boundclass_ishashable(conn2):
     records.add(x)
     records.add(y)
 
-def test_bind_multiple_tables(connection):
+def test_dbconnection_binds_multiple_tables(connection):
 
     @dataclass()
     class Foo:
@@ -201,6 +201,7 @@ def test_db_dataclass_throws_error_on_missing_param(conn2):
 
     with pytest.raises(TypeError):
         conn2.t.Widget(id=1)
+
     with pytest.raises(TypeError):
         conn2.t.Widget(id=1, name="Bob")
 
