@@ -215,17 +215,17 @@ def test_db_dataclass_throws_error_on_missing_param(conn2):
     assert record.panacea == True
 
 
-def test_Insert(conn2):
-
-
-    with pytest.raises(dcdb.IntegrityError):
-        conn2.t.Widget(name="Bob", age=55)
-
-    conn2.t.Widget(name="Bob", age=55, panacea=False)
-    row = conn2.execute("SELECT * FROM Widget LIMIT 1").fetchone()
-
-    assert row['name'] == "Bob"
-    assert row['age'] == 55
+# def test_DBTableRegistry__create(conn2):
+#
+#
+#     with pytest.raises(dcdb.IntegrityError):
+#         conn2.t.Widget(name="Bob", age=55)
+#
+#     conn2.t.Widget(name="Bob", age=55, panacea=False)
+#     row = conn2.execute("SELECT * FROM Widget LIMIT 1").fetchone()
+#
+#     assert row['name'] == "Bob"
+#     assert row['age'] == 55
 
 
 def test_DBTableProxy_InsertMany(conn2):
@@ -246,7 +246,7 @@ def test_DBTableProxy_InsertMany(conn2):
     assert bob.age == 10
     assert Joe.name == "Joe" #this seems redundent
 
-def test_Create_with_default_factory(connection):
+def test_DBCommonTable_AND_DBRegistry__create_with_default_factory(connection):
 
     @dataclass()
     class Test:
@@ -259,7 +259,7 @@ def test_Create_with_default_factory(connection):
     instance = connection.t.Test.Create()
 
 
-def test_Create(conn2):
+def test_DBTableRegistry__create(conn2):
 
     with pytest.raises(TypeError):
         record = conn2.t.Widget(id=1, name="Bob", age=55)
@@ -278,10 +278,12 @@ def test_Create(conn2):
 
 
 
-
-def test_Select(conn2):
+def test_DBConnection__data_integrity_from_sqlite(conn2):
     with pytest.raises(dcdb.IntegrityError):
         conn2.execute("INSERT INTO Widget(name,age) VALUES ('Bob', 33)")
+
+
+def test_DBCommonTable__Select(conn2):
 
     conn2.execute("INSERT INTO Widget(name,age,panacea) VALUES ('Bob', 33, 1)")
     row = conn2.t.Widget.Select("name=?", "Bob").fetchone()
