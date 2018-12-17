@@ -569,6 +569,7 @@ class DBConnection:
 
     def __init__(self, dburl: str = None):
 
+        self.closed = False
         self.dburl = dburl
 
         if dburl is not None:
@@ -583,13 +584,27 @@ class DBConnection:
         self._dirty_records = set()
         self._dirty_records_track_changes = False
 
+    def purge(self, this_deletes_everything=False):
+        if this_deletes_everything is not True:
+            raise RuntimeError("Purge called without confirmation `this_deletes_everything` set to True")
+
+        for record in self._conn_.execute(self._sql_list_tables):
+            self._conn_.execute(f"DROP TABLE {record['name']}")
+
+        self._conn_.execute("VACUUM")
+
 
     def close(self):
-        del self.tables
-        del self.t
-        del self.registry
-        del self._dirty_records
-        self._meta_.connection.close()
+        if self.closed is not True:
+            del self.t
+            del self._tables
+            del self.registry
+            del self._dirty_records
+            self._conn_.close()
+            self._conn_ = None
+            del self._conn_
+
+        self.closed = True
 
     def _dirty_record_track_changes(self, flag: bool):
         self._dirty_records_track_changes = flag
@@ -1129,6 +1144,14 @@ class TablesRegistry:
     def __init__(self, connection):
         self._registry: {str: DBCommonTable} = dict()
         self._connection = connection
+
+    def __del__(self):
+        for name in [name for name in self._registry.keys()]:
+            del self._registry[name]
+
+        self._registry = {}
+
+
 
     def mk_bound_dataclass(self, source_cls, name: str) -> DBCommonTable:
         """
