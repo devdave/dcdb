@@ -668,7 +668,7 @@ class DBConnection:
         """
         ignore = [] if ignore is None else ignore
 
-        elements = scope.__dict__items() if hasattr(scope, "__dict__") else scope.items()
+        elements = scope.__dict__.items() if hasattr(scope, "__dict__") else scope.items()
         for name, val in elements:
             if name in ignore: continue
             if name.startswith("_"): continue
