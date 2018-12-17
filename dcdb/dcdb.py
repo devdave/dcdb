@@ -1242,6 +1242,8 @@ class TablesRegistry:
     #     return self._registry.get(key)
 
     def __getattr__(self, key):
+        if (key in self._registry) is False:
+            raise RuntimeError(f"Missing table {key!r} requested.  Tables available: {self._registry.keys()!r}")
         return self._registry.get(key)
 
     def __getitem__(self, key):

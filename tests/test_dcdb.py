@@ -422,6 +422,11 @@ def test_table_registry(connection):
     assert issubclass(MyWidget, Widget)
     assert issubclass(SameWidget.bound_cls, Widget)
 
+def test_TablesRegistry_missing_table(connection):
+
+    with pytest.raises(RuntimeError):
+        connection.t.NotATable
+
 
 def test_table_direct_children(connection):
 
