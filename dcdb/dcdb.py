@@ -552,6 +552,15 @@ class DBConnection:
         and a table registry (which maps to said database)
     """
 
+    __slots__ = ("closed",
+                 "dburl",
+                 "_conn_",
+                 "_tables", "t", "registry",
+                 "_dirty_records", "_dirty_records_track_changes",
+                 #I find this so bizarre in a way but it makes a sense, of sorts, that I need to add this
+                 "__weakref__"
+                 )
+
     _sql_list_tables = """SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;"""
 
     _sql_describe_table = """
@@ -567,7 +576,10 @@ class DBConnection:
             self._conn_.row_factory = sqlite3.Row
             self._conn_.isolation_level = None
 
-        self.tables = self.t = self.registry = TablesRegistry(self)
+        registry = TablesRegistry(self)
+        self.registry = registry
+        self._tables = registry
+        self.t = registry
         self._dirty_records = set()
         self._dirty_records_track_changes = False
 
@@ -963,7 +975,7 @@ class DBMeta:
 
 
     def __init__(self, connection, name, fields, indexes):
-        self.connection = weakref.proxy(connection)
+        self.connection = connection
         self.name = name
         self.fields = fields
         self.indexes = indexes
@@ -1111,6 +1123,8 @@ class TablesRegistry:
 
 
     """
+
+    __slots__ = ("_registry", "_connection")
 
     def __init__(self, connection):
         self._registry: {str: DBCommonTable} = dict()
