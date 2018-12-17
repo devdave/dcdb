@@ -242,6 +242,16 @@ class AutoCastDict(AutoCast):
     def To(cls, value: dict):
         return pickle.dumps(value)
 
+class AutoCastDictJson:
+
+    @classmethod
+    def From(cls, value):
+        return json.loads(value)
+
+    @classmethod
+    def To(cls, value):
+        return json.dumps(value)
+
 
 class SQLOperators(enum.Enum):
     AND = "AND"
