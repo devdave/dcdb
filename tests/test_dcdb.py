@@ -323,9 +323,7 @@ def test_DBCommonTable_update(conn2):
     assert record.name == "Joe"
     assert record.age == 22
     assert record.panacea is True
-    record.save()
 
-    records = [r for r in conn2.execute("SELECT * FROM Widget").fetchall()]
     record.panacea = False
     record.age = 33
     record.update()
