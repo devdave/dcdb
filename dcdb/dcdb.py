@@ -657,6 +657,10 @@ class DBConnection:
         return self._conn_
 
     @property
+    def tables(self):
+        return self._tables
+
+    @property
     def cursor(self):
         return self._conn_.cursor()
 
