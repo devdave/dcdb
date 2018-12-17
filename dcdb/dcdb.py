@@ -308,6 +308,10 @@ class ProxyList(list):
         LOG.debug(f"{args|r} {kwargs|r}")
         return self.auto_list.create(self.owner, *args, **kwargs)
 
+    def first(self) ->DBCommonTable:
+        if len(self) >= 1:
+            return self[0]
+
     def add(self, *records: DBCommonTable) -> DBCommonTable:
         print(records, self.owner, self.auto_list)
         return self.auto_list.add(self.owner, *records)
@@ -514,10 +518,8 @@ class AutoList:
             records = ProxyList(child_table.Select(where).fetchall())
             records._set_owner(self, obj)
             self.__cache = records
-        else:
-            records = self.__cache
 
-        return records
+        return self.__cache
 
 
 @dcs.dataclass
