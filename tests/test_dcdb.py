@@ -314,7 +314,7 @@ def test_Insert_Select_Get(conn2):
     assert record.panacea is False, repr(raw_record['panacea'])
 
 
-def test_update_Update(conn2):
+def test_DBCommonTable_update(conn2):
     conn2.bind(Widget)
 
     # TODO should I consider it a problem that setting id skips saving the actual record?
@@ -329,14 +329,14 @@ def test_update_Update(conn2):
     record.panacea = False
     record.age = 33
     record.update()
-    new_record = conn2.t.Widget.Get("id=?", record.id)
-    assert isinstance(new_record, conn2.t.Widget.bound_cls)
-    assert new_record.panacea is False
-    assert new_record.age == 33
-    assert new_record.id == record.id
+    same_record = conn2.t.Widget.Get("id=?", record.id)
+    assert isinstance(same_record, conn2.t.Widget.bound_cls)
+    assert same_record.panacea is False
+    assert same_record.age == 33
+    assert same_record.id == record.id
 
 
-def test_bulk_update(conn2):
+def test_DBCommonTable_Update__bulk_update(conn2):
 
     # Populate the db
     conn2.t.Widget(name="Bob", age=13, panacea=True)
