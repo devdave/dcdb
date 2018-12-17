@@ -1237,8 +1237,8 @@ class TablesRegistry:
 
         return db_cls
 
-    def get_table(self, table_name: str) -> DBCommonTable:
-        return self._registry.get(key)
+    # def get_table(self, table_name: str) -> DBCommonTable:
+    #     return self._registry.get(key)
 
     def __getattr__(self, key):
         return self._registry.get(key)
