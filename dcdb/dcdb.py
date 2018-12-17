@@ -552,11 +552,7 @@ class DBConnection:
         and a table registry (which maps to said database)
     """
 
-    _sql_list_tables = """"
-    SELECT name, sql
-    FROM sqlite_master
-    WHERE type='table'
-    ORDER BY name;"""
+    _sql_list_tables = """SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;"""
 
     _sql_describe_table = """
         PRAGMA table_info(%s)
