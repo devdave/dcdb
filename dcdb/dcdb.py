@@ -641,13 +641,20 @@ class DBConnection:
     def binds(self, *tables: [DBCommonTable], create_table: bool = True):
         return [self.bind(table, create_table=create_table) for table in tables]
 
-    def bind(self, table, create_table: bool = True):
-        bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
+    def bind(self, *tables, create_table: bool = True):
+        collect = []
+        for table in tables:
+            bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
 
-        if create_table:
-            DBSQLOperations.Create_table(self, bound_class, bound_class._meta_.name)
+            if create_table:
+                DBSQLOperations.Create_table(self, bound_class, bound_class._meta_.name)
 
-        return bound_class
+            collect.append((bound_class))
+
+        if len(tables) == 1:
+            return collect[0]
+        else:
+            return collect
 
     def bind_scan(self, scope, ignore: list = None, create_table = True) -> None:
         """
