@@ -60,14 +60,14 @@ def test_dcdb_cast_to_database_type__fix_ordering_error():
     assert value == result
 
 
-def test_dbconnection___connects():
+def test_DBConnection___connects():
     my_conn = dcdb.DBConnection(":memory:")
     result = my_conn.handle().execute("SELECT 1=1").fetchone()
     assert result[0] == 1
 
 
 
-def test_dcdb_cast_to_database_AND_autocastdict___works():
+def test_AutocastDict__AND__dcdb_cast_to_database___works():
 
     import pickle
 
@@ -106,7 +106,7 @@ def test_dcdb_cast_to_database():
     assert expected == actual
 
 
-def test_tableregistry_mk_bound(connection):
+def test_DBTableRegistry___mk_bound(connection):
 
     @dataclass()
     class Widget:
@@ -136,7 +136,7 @@ def test_tableregistry_mk_bound(connection):
     assert rows[3]['name'] == "panacea"
     assert rows[2]['type'] == "INTEGER"
 
-def test_dbcommontable_ishashable(conn2):
+def test_DBCommonTable___ishashable(conn2):
 
     x = conn2.t.Widget(name="Bob", age=10, panacea=True)
     y = conn2.t.Widget(name="Alive", age=12, panacea=False)
@@ -149,7 +149,7 @@ def test_dbcommontable_ishashable(conn2):
     records.add(x)
     records.add(y)
 
-def test_dbconnection_binds_multiple_tables(connection):
+def test_DBConnection___binds_multiple_tables(connection):
 
     @dataclass()
     class Foo:
@@ -423,7 +423,7 @@ def test_table_registry(connection):
     assert issubclass(MyWidget, Widget)
     assert issubclass(SameWidget.bound_cls, Widget)
 
-def test_TablesRegistry_missing_table(connection):
+def test_DBTablesRegistry___exception_on_missing_table(connection):
 
     with pytest.raises(RuntimeError):
         connection.t.NotATable
