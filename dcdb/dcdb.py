@@ -1147,7 +1147,7 @@ class TablesRegistry:
 
     """
 
-    __slots__ = ("_registry", "_connection")
+    __slots__ = ("_registry", "_connection", "__weakref__")
 
     def __init__(self, connection):
         self._registry: {str: DBCommonTable} = dict()
@@ -1237,9 +1237,7 @@ class TablesRegistry:
 
         fields = {f.name: f for f in db_cls_fields}
         set_default("_meta_", DBMeta(self._connection, name, fields, {}))
-        # set_default("_conn_", self._connection)
-        # set_default("_table_", name)
-        # set_default("_fields_", fields)
+        set_default("tables", weakref.proxy(self))
         set_default("_original_", source_cls)
 
 
