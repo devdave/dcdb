@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/dcdb.iml" filepath="$PROJECT_DIR$/.idea/dcdb.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../json_catch/.idea/json_catch.iml" filepath="$PROJECT_DIR$/../json_catch/.idea/json_catch.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dcdb.iml" filepath="$PROJECT_DIR$/.idea/dcdb.iml" />      
     </modules>
   </component>
 </project>
