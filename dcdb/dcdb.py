@@ -1018,7 +1018,7 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     def __post_init__(self):
 
-        self.tables = self._meta_.connection.tables
+        # self.tables = self._meta_.connection.tables
 
         # Post processing to convert from DB to Application
         for field in self._meta_.fields.values():
