@@ -311,7 +311,7 @@ def test_Insert_Select_Get(conn2):
 
     assert record.name == "Bob"
     assert record.age == 44
-    assert record.panacea is False, repr(raw_record['panacea'])
+    assert record.panacea is False
 
 
 def test_DBCommonTable_update(conn2):
