@@ -4,6 +4,7 @@
     Tests for DCDB
 """
 
+import logging
 import pytest
 
 import dcdb
@@ -11,7 +12,7 @@ import dcdb
 from dataclasses import dataclass, fields, field
 import enum
 
-#debug
+LOG = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -651,7 +652,7 @@ def test_AutoList_full(connection):
 
         @Pending.remover
         def Pending(self, parent_table, child_record):
-            print(self, parent_table, child_record)
+            LOG.debug(self, parent_table, child_record)
             child_record['parent_id'] = None
             child_record.update()
             return child_record
@@ -744,4 +745,5 @@ def main():
     pytest.main()
 
 if __name__ == "__main__":
-     main()
+    logging.basicConfig(level=logging.DEBUG)
+    main()
