@@ -314,11 +314,11 @@ class ProxyList(list):
             return self[0]
 
     def add(self, *records: DBCommonTable) -> DBCommonTable:
-        print(records, self.owner, self.auto_list)
+        LOG.debug(records, self.owner, self.auto_list)
         return self.auto_list.add(self.owner, *records)
 
     def remove(self, record: DBCommonTable) -> DBCommonTable:
-        print(record, self.owner, self.auto_list)
+        LOG.debug(record, self.owner, self.auto_list)
         return self.auto_list.remove(self.owner, record)
 
 
@@ -783,8 +783,8 @@ class DBSQLOperations:
         try:
             return connection.execute(sql)
         except sqlite3.OperationalError as ex:
-            print(ex)
-            print("Failed query:\n", f"{sql!r}:{len(sql)}")
+            LOG.exception(ex)
+            LOG.error("Failed query:\n", f"{sql!r}:{len(sql)}")
             raise
 
     @classmethod
