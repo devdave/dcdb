@@ -1243,13 +1243,14 @@ class TablesRegistry:
 
         return db_cls
 
-    # def get_table(self, table_name: str) -> DBCommonTable:
-    #     return self._registry.get(key)
+    def get_table(self, table_name: str) -> DBCommonTable:
+        if (table_name in self._registry) is False:
+            raise RuntimeError(f"Missing table {table_name!r} requested.  Tables available: {self._registry.keys()!r}")
+        return self._registry.get(table_name)
 
     def __getattr__(self, key):
-        if (key in self._registry) is False:
-            raise RuntimeError(f"Missing table {key!r} requested.  Tables available: {self._registry.keys()!r}")
-        return self._registry.get(key)
+        return self.get_table(key)
 
     def __getitem__(self, key):
-        return self._registry.get(key)
+        return self.get_table(key)
+
