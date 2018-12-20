@@ -303,16 +303,13 @@ def test_DBRegisteredTable_AND_DBCommonTable___Insert_Select_Get(conn2):
 
     record = MyWidget.Select("name=?", "Bob").fetchone()
 
-    assert record.name  == "Bob"
+    assert record.name == "Bob"
     assert record.age == 44
     assert record.panacea == False
 
-    record = MyWidget.Get("name=?", "Bob")
-    isinstance(record, MyWidgetClass)
-
-    assert record.name == "Bob"
-    assert record.age == 44
-    assert record.panacea is False
+    record2 = MyWidget.Get("name=?", "Bob")
+    assert isinstance(record2, MyWidgetClass)
+    assert record == record2
 
 
 def test_DBCommonTable_update(conn2):
