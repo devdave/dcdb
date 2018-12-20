@@ -607,6 +607,9 @@ def test_cast_to_database_AND_cast_from_database___column_as_enum(connection):
     off_record = connection.t.Test(enum_column=EnumFlags.OFF)
     on_record = connection.t.Test(enum_column=EnumFlags.ON)
 
+    assert off_record.enum_column == EnumFlags.OFF
+    assert on_record.enum_column == EnumFlags.ON
+
 
 
 
