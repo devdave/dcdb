@@ -294,7 +294,7 @@ def test_DBCommonTable__Select(conn2):
     assert row.panacea == 1
 
 
-def test_Insert_Select_Get(conn2):
+def test_DBRegisteredTable_AND_DBCommonTable___Insert_Select_Get(conn2):
 
     MyWidget = conn2.t.Widget
     MyWidgetClass = MyWidget.bound_cls
@@ -417,7 +417,7 @@ def test_DBCommonTable_hashing_equals(conn2):
 
 
 
-def test_table_registry(connection):
+def test_DBTableRegistry___works(connection):
     MyWidget = connection.bind(Widget)
     SameWidget = connection.t.Widget
     assert issubclass(MyWidget, Widget)
@@ -429,7 +429,7 @@ def test_DBTablesRegistry___exception_on_missing_table(connection):
         connection.t.NotATable
 
 
-def test_table_direct_children(connection):
+def test_DBTableRegistry___tables_direct_children(connection):
 
     @dataclass()
     class Parent:
@@ -512,7 +512,14 @@ def test_autoselect_property(connection):
 
 
 
-def test_error_columns_mismatch(conn2):
+def test_DBCommonTable___fix_error_columns_mismatch(conn2):
+    """
+        At one point, the table/record creation mechanism
+        used the internal fields dictionary for record creation
+        which had the unintended consequence of creating records
+        with fields that were not in order and therefore value mismatched.
+
+    """
 
     @dataclass
     class OtherWidget:
@@ -576,7 +583,7 @@ def test_mutation_tracking(conn2:dcdb.DBConnection):
     assert thingamajig.height == 5
 
 
-def test_column_as_enum(connection):
+def test_cast_to_database_AND_cast_from_database___column_as_enum(connection):
 
     import enum
 
@@ -607,7 +614,7 @@ def test_column_as_enum(connection):
 
 
 
-def test_AutoList_full(connection):
+def test_AutoList___works(connection):
     import enum
 
     class ChildTableStatus(enum.IntEnum):
