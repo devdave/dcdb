@@ -327,9 +327,11 @@ TableSpec = collections.namedtuple("TableSpec", "name, column")
 
 
 class AutoList:
+    """
+
+    """
     __slots__ = (
         "__parent_table",
-
         "__child_table",
         "__owner",
         "__conditions",
@@ -338,7 +340,9 @@ class AutoList:
         "__rcreate",
         "__radd",
         "__rremove",
-        "__cache")
+        "__cache",
+        "__weakref__"
+    )
 
     class Operator:
         __slots__ = ("op_str",)
@@ -391,10 +395,6 @@ class AutoList:
         self.__cache = __cache
 
     def where(self, *joins):
-
-
-
-
 
         str_operators = {"AND", "OR"}  # TODO add more
 
