@@ -478,7 +478,7 @@ def test_DBTableRegistry___tables_direct_children(connection):
 
 
 
-def test_autoselect_property(connection):
+def test_AutoSelect___works(connection):
 
     @dataclass()
     class Foo:
