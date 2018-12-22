@@ -16,11 +16,15 @@ LOG = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def connection():
+def connection(request)->dcdb.DBConnection:
     """
         Fixture used to speed up testing
     """
-    return dcdb.DBConnection(":memory:")
+    db_file = pathlib.Path(__file__).parent / "db" / f"{request.function.__name__}.sqlite"
+    if db_file.exists():
+        db_file.unlink()
+
+    return dcdb.DBConnection(str(db_file))
 
 @pytest.fixture()
 def conn2(connection:dcdb.DBConnection):
