@@ -11,6 +11,7 @@ import dcdb
 
 from dataclasses import dataclass, fields, field
 import enum
+import pathlib
 
 LOG = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ def test_AutocastDict__AND__dcdb_cast_to_database___works():
     assert result == pickle.dumps(test_value)
 
 
-def test_dcdb_cast_to_database():
+def test_dcdb__cast_to_database():
 
     class Switch(enum.Enum):
         OFF = 0
@@ -232,33 +233,44 @@ def test_make_complex_widget(connection):
 
 def test_db_dataclass_throws_error_on_missing_param(conn2):
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         conn2.t.Widget(id=1)
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         conn2.t.Widget(id=1, name="Bob")
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         conn2.t.Widget(id=1, name="Bob", age=55)
 
-    record = conn2.t.Widget(id=1, name="Bob", age=55, panacea=True)
-    assert record.id == 1
+    with pytest.raises(dcdb.IntegrityError):
+        conn2.t.Widget()
+
+    with pytest.raises(dcdb.IntegrityError):
+        conn2.t.Widget(name="Bob")
+
+    with pytest.raises(dcdb.IntegrityError):
+        conn2.t.Widget(name="Bob", age=55)
+
+
+    record = conn2.t.Widget(name="Bob", age=55, panacea=True)
+    assert record.id == 1 #asserts this is the first record added to the table, therefore assumes only record
     assert record.name == "Bob"
     assert record.age == 55
     assert record.panacea == True
 
 
-# def test_DBTableRegistry__create(conn2):
-#
-#
-#     with pytest.raises(dcdb.IntegrityError):
-#         conn2.t.Widget(name="Bob", age=55)
-#
-#     conn2.t.Widget(name="Bob", age=55, panacea=False)
-#     row = conn2.execute("SELECT * FROM Widget LIMIT 1").fetchone()
-#
-#     assert row['name'] == "Bob"
-#     assert row['age'] == 55
+def test_DBTableRegistry__create(conn2):
+
+
+    with pytest.raises(dcdb.IntegrityError):
+        conn2.t.Widget(name="Bob", age=55)
+
+    conn2.t.Widget(name="Bob", age=55, panacea=False)
+    row = conn2.execute("SELECT * FROM Widget LIMIT 1").fetchone()
+
+    assert row['id'] == 1
+    assert row['name'] == "Bob"
+    assert row['age'] == 55
 
 
 def test_DBTableProxy_InsertMany(conn2):
@@ -294,8 +306,11 @@ def test_DBCommonTable_AND_DBRegistry__create_with_default_factory(connection):
 
 def test_DBTableRegistry__create(conn2):
 
-    with pytest.raises(TypeError):
-        record = conn2.t.Widget(id=1, name="Bob", age=55)
+    with pytest.raises(ValueError):
+        record = conn2.t.Widget(id=1)
+
+    with pytest.raises(dcdb.IntegrityError):
+        record = conn2.t.Widget(name="Bob", age=55)
 
     record = conn2.t.Widget(name="Bob", age=55, panacea=True)
     record.save()
@@ -612,7 +627,7 @@ def test_mutation_tracking(conn2:dcdb.DBConnection):
     assert thingamajig.height == 5
 
 
-def test_cast_to_database_AND_cast_from_database___column_as_enum(connection):
+def test_dcdb__cast_to_database_AND_cast_from_database___column_as_enum(connection):
 
     import enum
 
