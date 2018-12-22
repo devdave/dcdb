@@ -129,6 +129,33 @@ LOG = logging.getLogger(__name__)
 # Avoid application code from having to import sqlite3
 IntegrityError = sqlite3.IntegrityError
 
+class Transformers:
+    _transforms = {}
+    _converters = namedtuple("Converter","To,From")
+
+    @classmethod
+    def Set(cls, transform_type, to_func, from_func):
+        cls._transforms[transform_type] = cls._converters(to_func, from_func)
+
+    @classmethod
+    def Has(cls, transform_type: type):
+        return transform_type in cls._transforms
+
+    @classmethod
+    def To(cls, value, transform_type: type):
+        return cls._transforms[transform_type].To(value, transform_type)
+
+    @classmethod
+    def From(cls, value, transform_type):
+        return cls._transforms[transform_type].From(value, transform_type)
+
+
+_datetime_format = "%Y-%m-%d %H:%M:%S.%f"
+_date_format ="%Y-%m-%d"
+Transformers.Set(dt.datetime, lambda v, t: v.strftime(_dt_format), lambda v,t: dt.datetime.strptime(v, _dt_format))
+Transformers.Set(dt.date, lambda v, t: v.strftime(_date_format), lambda v, t: dt.datetime.strptime(v, _date_format).date())
+Transformers.Set(dt.time, lambda v, t: v.strftime("%c"), lambda v, t: dt.datetime.strptime(v, "%c").time())
+
 
 def cast_from_database(value: object, value_type: type):
     """
@@ -138,7 +165,7 @@ def cast_from_database(value: object, value_type: type):
     :param value_type:
     :return: value_type(value)
     """
-    LOG.debug(f"vale: {value!r}, value_type: {value_type!r}")
+    LOG.debug(f"cast_from_database(value= {value!r}, value_type= {value_type!r})")
     debug = value
 
     if value == "None":
@@ -155,6 +182,8 @@ def cast_from_database(value: object, value_type: type):
         retval = bool(int(value))
     elif hasattr(value_type, "From"):
         retval = value_type.From(value)
+    elif Transformers.Has(value_type):
+        retval = Transformers.From(value, value_type)
     else:
         ex_msg = f"""
             f"Unable to transform {value_type!r} as returned from DB             
@@ -175,7 +204,7 @@ def cast_to_database(value, value_type: type) -> str:
     :param value_type:
     :return str:
     """
-    LOG.debug(f"vale: {value!r}, value_type: {value_type!r}")
+    LOG.debug(f"cast_to_datebase-> value: {value!r}, value_type: {value_type!r}")
     debug = value
 
     if value is None:
@@ -188,6 +217,8 @@ def cast_to_database(value, value_type: type) -> str:
         retval = str(value)
     elif hasattr(value_type, "To"):
         retval = value_type.To(value)
+    elif Transformers.Has(value_type):
+        retval = Transformers.To(value, value_type)
     else:
         ex_msg = \
             f"""
