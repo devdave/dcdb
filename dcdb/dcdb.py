@@ -118,11 +118,12 @@ import pickle
 import json
 import abc  # TODO is this needed?
 import collections
+from collections import namedtuple
 import enum
 import inspect
 import logging
 import weakref
-
+import datetime as dt
 
 LOG = logging.getLogger(__name__)
 
@@ -680,7 +681,7 @@ class DBConnection:
             if create_table:
                 DBSQLOperations.Create_table(self, bound_class, bound_class._meta_.name)
 
-            collect.append((bound_class))
+            collect.append(weakref.proxy(bound_class))
 
         if len(tables) == 1:
             return collect[0]
@@ -737,7 +738,7 @@ class DBConnection:
 
 class DBRegisteredTable:
     #TODO kill this off and or consolidate somehow
-    __slots__ = ('connection', 'bound_cls', 'table_name', 'fields')
+    __slots__ = ('connection', 'bound_cls', 'table_name', 'fields', "__weakref__")
 
     def __init__(self, connection, bound_cls, table_name, fields):
         self.connection = connection
@@ -753,6 +754,7 @@ class DBRegisteredTable:
         if "id" not in kwargs:
             return self.bound_cls.Create(*args, **kwargs)
         else:
+            raise ValueError("Do not assign record ID through DBRegisteredTable")
             return self.bound_cls(*args, **kwargs)
 
 
@@ -1277,7 +1279,7 @@ class TablesRegistry:
     def get_table(self, table_name: str) -> DBCommonTable:
         if (table_name in self._registry) is False:
             raise RuntimeError(f"Missing table {table_name!r} requested.  Tables available: {self._registry.keys()!r}")
-        return self._registry.get(table_name)
+        return weakref.proxy(self._registry.get(table_name))
 
     def __getattr__(self, key):
         return self.get_table(key)
