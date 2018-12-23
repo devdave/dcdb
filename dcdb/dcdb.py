@@ -164,7 +164,7 @@ def cast_from_database(value: object, value_type: type):
     Transformer which ensures that None is None, int is int, etc.
 
     :param value:
-    :param value_type:
+    :param value_type: The type that value must be returned as
     :return: value_type(value)
     """
     LOG.debug(f"cast_from_database(value= {value!r}, value_type= {value_type!r})")
