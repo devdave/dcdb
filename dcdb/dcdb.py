@@ -130,13 +130,14 @@ LOG = logging.getLogger(__name__)
 # Avoid application code from having to import sqlite3
 IntegrityError = sqlite3.IntegrityError
 
+ConverterPair = namedtuple("ConverterPair", "To,From")
+
 class Transformers:
     _transforms = {}
-    _converters = namedtuple("Converter","To,From")
 
     @classmethod
     def Set(cls, transform_type, to_func, from_func):
-        cls._transforms[transform_type] = cls._converters(to_func, from_func)
+        cls._transforms[transform_type] = ConverterPair(to_func, from_func)
 
     @classmethod
     def Has(cls, transform_type: type):
