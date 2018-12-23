@@ -170,11 +170,7 @@ def cast_from_database(value: object, value_type: type):
     LOG.debug(f"cast_from_database(value= {value!r}, value_type= {value_type!r})")
     debug = value
 
-    if value == "None":
-        # TODO figure out how/why this is possible
-        raise RuntimeError("None was cast as 'None' previously.  Date integrity issue detected.")
-        retval = None
-    elif value is None:
+    if value is None:
         retval = None
     elif value_type == str and isinstance(value, str):
         retval = value
