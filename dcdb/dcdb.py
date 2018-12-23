@@ -853,7 +853,7 @@ class DBSQLOperations:
         if column_field.type not in type_map:
             if hasattr(column_field.type, "SUBTYPE"):
                 sql_column = column_field.type.SUBTYPE
-                default_value = find_default(column_field)
+
 
             elif issubclass(column_field.type, enum.Enum):
                 if issubclass(column_field.type, enum.IntEnum):
@@ -861,14 +861,14 @@ class DBSQLOperations:
                 else:
                     sql_column = "TEXT"
 
-                default_value = find_default(column_field)
-
             else:
                 sql_column = "TEXT"
         else:
             sql_column = type_map[column_field.type] if column_field.type in type_map else "TEXT"
 
-            default_value = find_default(column_field)
+
+
+        default_value = find_default(column_field)
 
         if default_value is not dcs.MISSING:
             if default_value is None:
