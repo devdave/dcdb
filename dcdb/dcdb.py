@@ -355,6 +355,30 @@ class ProxyList(list):
         return self.auto_list.remove(self.owner, record)
 
 
+
+class AutoOperator:
+    __slots__ = ("op_str",)
+
+    def __init__(self, op_str):
+        self.op_str = op_str
+
+    def __call__(self, *args, **kwargs):
+        return self.op_str
+
+class AutoTerm:
+    __slots__ = ("term", "is_multi")
+
+    def __init__(self, term, is_multi=False):
+        self.term = term
+        self.is_multi = is_multi
+
+    def __call__(self, parent, child):
+        if self.is_multi:
+            return self.term[0].format(*self.term[1:], parent=parent, child=child)
+        else:
+            return self.term.format(parent=parent, child=child)
+
+
 TableSpec = collections.namedtuple("TableSpec", "name, column")
 
 
@@ -377,27 +401,7 @@ class AutoList:
         "__weakref__"
     )
 
-    class Operator:
-        __slots__ = ("op_str",)
 
-        def __init__(self, op_str):
-            self.op_str = op_str
-
-        def __call__(self, *args, **kwargs):
-            return self.op_str
-
-    class Term:
-        __slots__ = ("term", "is_multi")
-
-        def __init__(self, term, is_multi=False):
-            self.term = term
-            self.is_multi = is_multi
-
-        def __call__(self, parent, child):
-            if self.is_multi:
-                return self.term[0].format(*self.term[1:], parent=parent, child=child)
-            else:
-                return self.term.format(parent=parent, child=child)
 
 
 
@@ -420,7 +424,7 @@ class AutoList:
 
         self.__owner = owner
         self.__conditions = conditions if conditions is not None \
-            else [self.Term(f"{self.__child_table.column}={{parent.{self.__parent_table.column}}}")]
+            else [AutoTerm(f"{self.__child_table.column}={{parent.{self.__parent_table.column}}}")]
         self.__orderby = orderby
         self.__rcreate = creator
         self.__radd = adder
@@ -437,19 +441,19 @@ class AutoList:
 
             if isinstance(term, str):
                 if term.upper() in str_operators:
-                    new_conditions.append(self.Operator(term))
+                    new_conditions.append(AutoOperator(term))
                 else:
-                    new_conditions.append(self.Term(term))
+                    new_conditions.append(AutoTerm(term))
             else:
                 assert isinstance(term, list), "Where conditions must be str, [format str ,str], or [format str, *objects]"
-                new_conditions.append(self.Term(term, is_multi=True))
+                new_conditions.append(AutoTerm(term, is_multi=True))
 
         # expr OP expr OP
         computed = []
         for position, element in enumerate(new_conditions):
             if position % 2 != 0:
-                if isinstance(element, self.Operator) is False:
-                    computed.append(self.Operator("AND"))
+                if isinstance(element, AutoOperator) is False:
+                    computed.append(AutoOperator("AND"))
                     computed.append(element)
                 else:
                     computed.append(element)
