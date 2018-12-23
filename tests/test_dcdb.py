@@ -785,6 +785,32 @@ def test_AutoList_dotted_relations(connection):
     boss.employees.add(emp1, emp2, emp4)
 
 
+def test_AutoKeyedList__works(connection):
+    return
+    @dataclass()
+    class Boss:
+
+        employees = dcdb.AutoKeyedList("Boss.id", "Employee.boss_id", "Employee.name")
+
+    @dataclass()
+    class Employee:
+        name:str
+        boss_id: int
+
+    connection.binds(Boss, Employee)
+
+    employee_names = ["Alice", "Bob", "Kate", "Steve", "Lana", "Archer"]
+    boss = connection.tables.Boss()
+
+    for employee_name in employee_names:
+        connection.table.Employee(name=employee_name, boss_id=boss.id)
+
+    for employee_name in employee_names:
+        assert employee_name in boss.employees
+
+    assert len(boss.employees) == 6
+
+
 
 def main():
     import sys
