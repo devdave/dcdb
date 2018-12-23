@@ -265,7 +265,7 @@ class AutoCastDict(AutoCast):
     SUBTYPE = "BINARY"
 
     @classmethod
-    def From(self, value):
+    def From(cls, value):
         return pickle.loads(value)
 
     @classmethod
