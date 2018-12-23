@@ -339,7 +339,7 @@ class ProxyList(list):
         self.owner = weakref.proxy(owner)
 
     def __call__(self, *args, **kwargs) -> DBCommonTable:
-        LOG.debug(f"{args|r} {kwargs|r}")
+        LOG.debug(f"{args!r} {kwargs!r}")
         return self.auto_list.create(self.owner, *args, **kwargs)
 
     def first(self) ->DBCommonTable:
