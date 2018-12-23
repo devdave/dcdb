@@ -301,8 +301,12 @@ class AutoSelect(AutoCast):
 
         super().__init__()
 
-    def __get__(self, owner: DBCommonTable, objtype=None):
-        if owner is None:
+    def __get__(self, owner: DBCommonTable, objtype: DBCommonTable=None):
+        """
+
+        :type owner:
+        """
+        if objtype is None:
             return self
 
         # Let the crazy abuse of semi-private properties begin!
