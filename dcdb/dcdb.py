@@ -140,15 +140,15 @@ class Transformers:
         cls._transforms[transform_type] = ConverterPair(to_func, from_func)
 
     @classmethod
-    def Has(cls, transform_type: type):
+    def Has(cls, transform_type: type) -> bool:
         return transform_type in cls._transforms
 
     @classmethod
-    def To(cls, value, transform_type: type):
+    def To(cls, value, transform_type: type) -> str:
         return cls._transforms[transform_type].To(value, transform_type)
 
     @classmethod
-    def From(cls, value, transform_type):
+    def From(cls, value, transform_type) -> object:
         return cls._transforms[transform_type].From(value, transform_type)
 
 
