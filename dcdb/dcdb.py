@@ -1067,6 +1067,8 @@ class DBCommonTable(DBDirtyRecordMixin):
         # Post processing to convert from DB to Application
         for field in self._meta_.fields.values():
             if field.name == "id": continue
+            if issubclass(field.type, TableDef):
+                raise Warning(f"TableDef leaked through on {self}")
 
             # avoid mutation tracking as much as possible
             orig_value = getattr(self, field.name)
