@@ -906,7 +906,7 @@ class DBSQLOperations:
                 values = [cast_to_database(cf_value, dc_fields[cf_name].type) for cf_name, cf_value in
                           column_fields.items()]
             except KeyError as ex:
-                raise RuntimeError(f"Missing column/{ex} - perhaps a typo?")
+                raise RuntimeError(f"Missing column/{ex} - perhaps a typo? Choices are {dc_fields.keys()}")
 
             return connection.execute(sql, values)
 
