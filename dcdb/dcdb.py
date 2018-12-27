@@ -1292,9 +1292,11 @@ class TablesRegistry:
             raise RuntimeError(f"Missing table {table_name!r} requested.  Tables available: {self._registry.keys()!r}")
         return weakref.proxy(self._registry.get(table_name))
 
-    def __getattr__(self, key):
-        return self.get_table(key)
-
-    def __getitem__(self, key):
-        return self.get_table(key)
+    __getattr__ = get_table
+    __getitem__ = get_table
+    # def __getattr__(self, key):
+    #     return self.get_table(key)
+    #
+    # def __getitem__(self, key):
+    #     return self.get_table(key)
 
