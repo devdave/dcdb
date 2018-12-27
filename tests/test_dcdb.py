@@ -13,6 +13,8 @@ from dataclasses import dataclass, fields, field
 import enum
 import pathlib
 
+import datetime as dt
+
 LOG = logging.getLogger(__name__)
 
 
@@ -811,6 +813,14 @@ def test_AutoKeyedList__works(connection):
     assert len(boss.employees) == 6
 
 
+def test_Transformers_AND_Datetime_dot_date():
+
+    actual_date = dt.date(2018,3,5)
+    actual_date_str = "2018-03-05"
+    assert dcdb.Transformers.To(actual_date, dt.date) == actual_date_str
+    assert dcdb.Transformers.To(actual_date_str, dt.date) == actual_date_str
+
+    assert dcdb.Transformers.From(actual_date_str, dt.date) == actual_date
 
 def main():
     import sys

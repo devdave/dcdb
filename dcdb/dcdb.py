@@ -154,9 +154,15 @@ class Transformers:
 
 _datetime_format = "%Y-%m-%d %H:%M:%S.%f"
 _date_format ="%Y-%m-%d"
-Transformers.Set(dt.datetime, lambda v, t: v.strftime(_datetime_format), lambda v,t: dt.datetime.strptime(v, _datetime_format))
-Transformers.Set(dt.date, lambda v, t: v.strftime(_date_format), lambda v, t: dt.datetime.strptime(v, _date_format).date())
-Transformers.Set(dt.time, lambda v, t: v.strftime("%c"), lambda v, t: dt.datetime.strptime(v, "%c").time())
+Transformers.Set(dt.datetime
+                 , lambda v, t: v if isinstance(v, str) else v.strftime(_datetime_format)
+                 , lambda v,t: dt.datetime.strptime(v, _datetime_format))
+Transformers.Set(dt.date
+                 , lambda v, t: v if isinstance(v, str) else v.strftime(_date_format)
+                 , lambda v, t: dt.datetime.strptime(v, _date_format).date())
+Transformers.Set(dt.time
+                 , lambda v, t: v.strftime("%c")
+                 , lambda v, t: dt.datetime.strptime(v, "%c").time())
 
 
 def cast_from_database(value: object, value_type: type):
