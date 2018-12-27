@@ -1218,27 +1218,17 @@ class TablesRegistry:
         def eval_type(st):
             return st if not isinstance(st, str) else eval(st, vars(sys.modules[source_cls.__module__]))
 
-        new_dataclass_fields: [str, type, dcs.Field] = []
-        dataclass_fields: [dcs.Field] = dcs.fields(source_cls)
-        # TODO why did I do this twice?
-        for df in dataclass_fields:
-            df.type = eval_type(df.type)
 
         # TODO put this in a higher scope or use a common heritage sentinel class
         exclusion_list = [TableDef]
 
-        for source_field in [f for f in dataclass_fields if f.type not in exclusion_list]:
-            new_field = dcs.field(default=source_field.default, default_factory=source_field.default_factory)
-
-            new_dataclass_fields.append((
-                source_field.name,
-                eval_type(source_field.type),
-                new_field))
-
-        db_cls = dcs.make_dataclass(f"DCDB_{name}", new_dataclass_fields, bases=(source_cls, DBCommonTable))
+        db_cls = dcs.make_dataclass(f"DCDB_{name}", [], bases=(source_cls, DBCommonTable))
         db_cls_fields = dcs.fields(db_cls)
+
         for field in db_cls_fields:
             field.type = eval_type(field.type)
+
+        db_cls_fields = [f for f in db_cls_fields if f.type not in exclusion_list]
 
         # TODO - Figure out why __hash__ from DCCommonTable is being stripped out
         setattr(db_cls, "__hash__", lambda instance: hash(id(instance)))
