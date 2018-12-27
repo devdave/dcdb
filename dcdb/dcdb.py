@@ -1214,7 +1214,7 @@ class TablesRegistry:
         """
 
         def eval_type(st):
-            return st if not isinstance(st, str) else eval(st, vars(sys.modules[self.__class__.__module__]))
+            return st if not isinstance(st, str) else eval(st, vars(sys.modules[source_cls.__module__]))
 
         new_dataclass_fields: [str, type, dcs.Field] = []
         dataclass_fields: [dcs.Field] = dcs.fields(source_cls)
