@@ -1226,7 +1226,10 @@ class TablesRegistry:
         db_cls_fields = dcs.fields(db_cls)
 
         for field in db_cls_fields:
-            field.type = eval_type(field.type)
+            try:
+                field.type = eval_type(field.type)
+            except NameError as ex:
+                raise NameError(f"Bad column type {field.type!r} for {field.name!r} on {name!r} class table")
 
         db_cls_fields = [f for f in db_cls_fields if f.type not in exclusion_list]
 
