@@ -690,7 +690,7 @@ class DBConnection:
             bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
 
             if create_table:
-                DBSQLOperations.Create_table(self, bound_class, bound_class._meta_.name)
+                bound_class._DRV.Create_table(self, bound_class, bound_class._meta_.name)
 
             collect.append(weakref.proxy(bound_class))
 
@@ -785,7 +785,7 @@ class DBRegisteredTable:
 
     def Count(self, where=None, *args, **kwargs):
         kwargs['params'] = "COUNT(*)"
-        cursor = DBSQLOperations.Select(self.connection, self.table_name, where, *args, columns="COUNT(*)")
+        cursor = self._DRV.Select(self.connection, self.table_name, where, *args, columns="COUNT(*)")
         return cursor.fetchone()[0]
 
 
@@ -1097,7 +1097,7 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     @classmethod
     def Select(cls, where=None, *args, **kwargs):
-        cursor = DBSQLOperations.Select(cls.DB(), cls._meta_.name, where, *args, **kwargs)
+        cursor = cls._DRV.Select(cls.DB(), cls._meta_.name, where, *args, **kwargs)
         return DBCursorProxy(cls, cursor)
 
     @classmethod
@@ -1106,12 +1106,12 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     @classmethod
     def Create(cls, **kwargs):
-        cursor = DBSQLOperations.Insert(cls.DB(), cls._meta_.name, cls._meta_.fields, **kwargs)
-        cursor = DBSQLOperations.Select(cls.DB(), cls._meta_.name, f"id={cursor.lastrowid}")
+        cursor = cls._DRV.Insert(cls.DB(), cls._meta_.name, cls._meta_.fields, **kwargs)
+        cursor = cls._DRV.Select(cls.DB(), cls._meta_.name, f"id={cursor.lastrowid}")
         return DBCursorProxy(cls, cursor).fetchone()
 
     def delete(self):
-        cursor = DBSQLOperations.Delete(self._meta_.connection, self._meta_.name, f"id={self.id}")
+        cursor = self._DRV.Delete(self._meta_.connection, self._meta_.name, f"id={self.id}")
 
         for field in dcs.fields(self):
             setattr(self, field.name, None)
@@ -1124,9 +1124,9 @@ class DBCommonTable(DBDirtyRecordMixin):
         retval = None
 
         if rec_id is not None:
-            retval = DBSQLOperations.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
+            retval = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
         else:
-            retval = DBSQLOperations.Insert(self._meta_.connection, self._meta_.name, self._meta_.fields, **values)
+            retval = self._DRV.Insert(self._meta_.connection, self._meta_.name, self._meta_.fields, **values)
             self.id = retval.lastrowid
 
         self._dirty_reset()
@@ -1134,7 +1134,7 @@ class DBCommonTable(DBDirtyRecordMixin):
     def update(self):
         values = dcs.asdict(self)
         rec_id = values.pop("id")
-        cursor = DBSQLOperations.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
+        cursor = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
         self._dirty_reset()
         return cursor.rowcount == 1
 
@@ -1278,7 +1278,7 @@ class TablesRegistry:
         set_default("_meta_", DBMeta(self._connection, name, fields, {}))
         set_default("tables", weakref.proxy(self))
         set_default("_original_", source_cls)
-        set_default("DRV", DBSQLOperations)
+        set_default("_DRV", DBSQLOperations)
 
 
         return db_cls
