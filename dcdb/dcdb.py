@@ -1278,6 +1278,7 @@ class TablesRegistry:
         set_default("_meta_", DBMeta(self._connection, name, fields, {}))
         set_default("tables", weakref.proxy(self))
         set_default("_original_", source_cls)
+        set_default("DRV", DBSQLOperations)
 
 
         return db_cls
