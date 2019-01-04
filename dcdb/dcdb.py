@@ -818,18 +818,18 @@ class DBSQLOperations:
             if field.type is TableDef: continue
             column_map[field.name] = cls._Create_column(field, type_map)
 
-        sql = [
-            f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {table_name} (""",
-            "id INTEGER PRIMARY KEY NOT NULL, "
-        ]
 
-        sql.append(", ".join([f"{k} {v}" for k, v in column_map.items()]), )
+
+        body_elements = ["id INTEGER PRIMARY KEY NOT NULL"]
+        body_elements += [f"{k} {v}" for k, v in column_map.items()]
+
+        # sql.append(", ".join(), )
 
         if table_definitions:
-            sql.append(", ")
-            sql.append(", ".join([str(td) for td in table_definitions.values()]))
+            body_elements += [str(td) for td in table_definitions.values()]
 
-        sql = " ".join(sql).strip() + ")"
+        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {table_name} ({", ".join(body_elements)})"""
+
 
         try:
             return connection.execute(sql)
