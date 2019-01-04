@@ -1062,7 +1062,7 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     def __post_init__(self):
 
-        # self.tables = self._meta_.connection.tables
+        LOG.debug("Finalization with __post_init__")
 
         # Post processing to convert from DB to Application
         for field in self._meta_.fields.values():
