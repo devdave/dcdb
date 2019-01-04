@@ -296,6 +296,40 @@ class SQLOperators(enum.Enum):
     LIKE = "LIKE"
 
 
+class RelationshipHandler(list):
+
+    def __init__(self, parent_cls, child_cls, parent_id, get_expr, set_expr):
+        self.parent = parent_cls
+        self.child_cls = child_cls
+        super().__init__([])
+
+    def add(self, child_record):
+        child_record[self.set_expr] = self.parent_id
+        child_record.save()
+
+    def remove(self, child_record):
+        child_record[self.set_expr] = None
+        child_record.save()
+
+    def count(self):
+        return child_record.count()
+
+    __len__ = count
+
+
+    def __iter__(self):
+        return self.child_cls.select("parent_id=?",1)
+
+    def __delitem__(self, key):
+        if len(self) <= key:
+            child_record = self[key]
+            self.remove(child_record)
+        else:
+            raise ValueError(f"{key} index error: have {[(pos, i.id,) for pos, i in enumerate(self)]}")
+
+
+
+
 class AutoSelect(AutoCast):
 
     def __init__(self, target_table: str, target_column: str, source_column: str):
