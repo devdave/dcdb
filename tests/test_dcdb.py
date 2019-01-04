@@ -207,6 +207,20 @@ def test_DBConnection___binds_multiple_tables(connection):
         assert issubclass(db_cls, dcdb.DBCommonTable)
 
 
+def test_DBCommonTable__assure_post_init_overload_works(connection):
+
+    @dataclass()
+    class Foo:
+        def __post_init__(self, *args, **kwargs):
+            super().__post_init__(*args, **kwargs)
+            LOG.debug("I was called")
+
+
+    connection.bind(Foo)
+
+    record = connection.tables.Foo()
+
+
 def test_make_complex_widget(connection):
 
     from typing import ClassVar
