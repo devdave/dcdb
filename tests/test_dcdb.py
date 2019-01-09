@@ -102,13 +102,13 @@ def test_DBConnection___connects():
 
 
 
-def test_AutocastDict__AND__dcdb_cast_to_database___works():
+def test_FieldPickled__AND__dcdb_cast_to_database___works():
 
     import pickle
 
     @dataclass
     class Foo:
-        colors: dcdb.AutoCastDict
+        colors: dcdb.FieldPickled
 
     test_value = {"red": 1, "blue": 2, "complicated":[1, 2, "this isn't a color"]}
     test_subject = Foo(test_value)
@@ -416,25 +416,27 @@ def test_DBCommonTable_Update__bulk_update(conn2):
 
 
 
+def test_TransformType__works(connection):
+    pass
 
-def test_DBTable_handles_dicttype(connection):
+def test_FieldPickled_AND_FieldJSON__works_as_expected(connection):
 
     @dataclass
     class Foo:
-        bar: dcdb.AutoCastDict
+        bar: dcdb.dcdb.FieldPickled
         name: str
 
     @dataclass()
     class Bar:
         name: str
-        blank: dcdb.AutoCastDict = None
+        blank: dcdb.FieldJSON = None
 
 
     connection.bind(Foo)
     connection.bind(Bar)
 
     test_value = {"a":1, 2:"b", "three":"c"}
-    # expected =   {"a":1, 2:"b", "three":"c"}
+    expected_json =   {"a": 1, '2': "b", "three": "c"}
 
     record = connection.t.Foo(bar=test_value, name="Test thing")
 
@@ -446,7 +448,7 @@ def test_DBTable_handles_dicttype(connection):
 
     record3 = connection.t.Bar(name="Bob", blank=test_value)
 
-    assert record3.blank == test_value
+    assert record3.blank == expected_json
 
 
 def test_DBCommonTable_hashing_equals(conn2):
@@ -835,6 +837,18 @@ def test_Transformers_AND_Datetime_dot_date():
     assert dcdb.Transformers.To(actual_date_str, dt.date) == actual_date_str
 
     assert dcdb.Transformers.From(actual_date_str, dt.date) == actual_date
+
+
+def test_Transformers__handles_decimal():
+
+    import decimal
+
+    dcdb.Transformers.Set(decimal.Decimal, lambda v,t: str(v), lambda v,t: t(v))
+
+    actual = 1.0
+    to_val = "1.0"
+
+    assert dcdb
 
 def main():
     import sys

@@ -167,6 +167,17 @@ Transformers.Set(dt.time
                  , lambda v, t: dt.datetime.strptime(v, "%c").time())
 
 
+class TransformDatetimeType:
+    def __init__(self, container, format):
+        self.container = container
+        self.format = format
+
+    def From(self, value: typing.Any, transform_type: typing.Union[type, object]):
+        return self.container.strptime(value, self.format)
+
+    def To(self, value: typing.Any, transform_type: typing.Union[type, object]):
+        return value if isinstance(value, str) else value.strftime(self.format)
+
 def cast_from_database(value: object, value_type: type):
     """
     Transformer which ensures that None is None, int is int, etc.
@@ -239,7 +250,7 @@ def cast_to_database(value, value_type: type) -> str:
     return retval
 
 
-class AutoCast(metaclass=abc.ABCMeta):
+class ColumnTransformer(metaclass=abc.ABCMeta):
     """
     TODO deprecated
 
@@ -248,13 +259,13 @@ class AutoCast(metaclass=abc.ABCMeta):
     pass
 
 
-class AutoCastDict(AutoCast):
+class FieldPickled(ColumnTransformer):
     """
 
         Given::
         @dataclass
         class Foo:
-            flags: AutoCastDict = None
+            flags: FieldPickled = None
 
         it converts `flags` to a pickled binary string and then back, allowing complex
         dictionary objects to be saved and restored from the database.
@@ -278,10 +289,12 @@ class AutoCastDict(AutoCast):
         return pickle.loads(value)
 
     @classmethod
-    def To(cls, value: dict):
+    def To(cls, value: dict, value_type):
         return pickle.dumps(value)
 
-class AutoCastDictJson:
+class FieldJSON:
+
+    SUBTYPE = "TEXT"
 
     @classmethod
     def From(cls, value, value_type):
@@ -291,6 +304,9 @@ class AutoCastDictJson:
     def To(cls, value, value_type):
         return json.dumps(value)
 
+class Fields:
+    pickled = FieldPickled
+    JSON = FieldJSON
 
 class SQLOperators(enum.Enum):
     AND = "AND"
@@ -333,7 +349,7 @@ class RelationshipHandler(list):
 
 
 
-class AutoSelect(AutoCast):
+class AutoSelect:
 
     def __init__(self, target_table: str, target_column: str, source_column: str):
         self.__target = None
@@ -1104,8 +1120,8 @@ class DBCommonTable(DBDirtyRecordMixin):
         # Post processing to convert from DB to Application
         for field in self._meta_.fields.values():
             if field.name == "id": continue
-            if issubclass(field.type, TableDef):
-                raise Warning(f"TableDef leaked through on {self}")
+            # if issubclass(field.type, TableDef):
+            #     raise Warning(f"TableDef leaked through on {self}")
 
             # avoid mutation tracking as much as possible
             orig_value = getattr(self, field.name)
