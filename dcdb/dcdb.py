@@ -746,6 +746,11 @@ class DBConnection:
     def bind(self, *tables, create_table: bool = True):
         collect = []
         for table in tables:
+            #TODO, this makes binding fragile, what if dataclasses internals change?
+            # reference  https://github.com/python/cpython/blob/3.7/Lib/dataclasses.py#L187
+            if hasattr(table, "__dataclass_fields__") is False:
+                raise TypeError(f"Expected {table} to be a dataclass, missing __dataclass_fields__ attribute")
+
             bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
 
             if create_table:

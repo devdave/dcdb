@@ -184,6 +184,14 @@ def test_DBCommonTable___ishashable(conn2):
     records.add(x)
     records.add(y)
 
+def test_DBConnection__bind_blowsup_with_typeerror_on_nondataclass(connection):
+
+    class Bogus:
+        foo: str = "bar"
+
+    with pytest.raises(TypeError):
+        connection.bind(Bogus)
+
 def test_DBConnection___binds_multiple_tables(connection):
 
     @dataclass()
