@@ -127,11 +127,11 @@ def test_dcdb__cast_to_database():
         ON = 1
 
         @classmethod
-        def To(cls, value):
+        def To(cls, value, _):
             return value.name
 
         @classmethod
-        def From(cls, value):
+        def From(cls, value, _):
             return cls.__members__[value]
 
 
@@ -652,11 +652,11 @@ def test_dcdb__cast_to_database_AND_cast_from_database___column_as_enum(connecti
         ON = 1
 
         @classmethod
-        def To(cls, value):
+        def To(cls, value, _):
             return value.name
 
         @classmethod
-        def From(cls, value):
+        def From(cls, value, _):
             return cls.__members__[value]
 
     @dataclass()
@@ -685,11 +685,11 @@ def test_AutoList___works(connection):
         COMPLETE = 1
 
         @classmethod
-        def To(cls, value):
+        def To(cls, value, _):
             return value.value
 
         @classmethod
-        def From(cls, value):
+        def From(cls, value, _):
             return cls(int(value))
 
     @dataclass()

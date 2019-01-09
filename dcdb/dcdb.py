@@ -143,10 +143,12 @@ class Transformers:
     def Has(cls, transform_type: type) -> bool:
         return transform_type in cls._transforms
 
+    #TODO deprecate transformers or rework, not happy having to pass tranform_type everywhere
     @classmethod
     def To(cls, value, transform_type: type) -> str:
         return cls._transforms[transform_type].To(value, transform_type)
 
+    # TODO deprecate transformers or rework, not happy having to pass tranform_type everywhere
     @classmethod
     def From(cls, value, transform_type) -> object:
         return cls._transforms[transform_type].From(value, transform_type)
@@ -185,7 +187,7 @@ def cast_from_database(value: object, value_type: type):
     elif value_type == bool:
         retval = bool(int(value))
     elif hasattr(value_type, "From"):
-        retval = value_type.From(value)
+        retval = value_type.From(value, value_type)
     elif Transformers.Has(value_type):
         retval = Transformers.From(value, value_type)
     else:
@@ -220,7 +222,8 @@ def cast_to_database(value, value_type: type) -> str:
     elif value_type == float:
         retval = str(value)
     elif hasattr(value_type, "To"):
-        retval = value_type.To(value)
+        retval = value_type.To(value, value_type)
+
     elif Transformers.Has(value_type):
         retval = Transformers.To(value, value_type)
     else:
@@ -271,7 +274,7 @@ class AutoCastDict(AutoCast):
     SUBTYPE = "BINARY"
 
     @classmethod
-    def From(cls, value):
+    def From(cls, value, value_type):
         return pickle.loads(value)
 
     @classmethod
@@ -281,11 +284,11 @@ class AutoCastDict(AutoCast):
 class AutoCastDictJson:
 
     @classmethod
-    def From(cls, value):
+    def From(cls, value, value_type):
         return json.loads(value)
 
     @classmethod
-    def To(cls, value):
+    def To(cls, value, value_type):
         return json.dumps(value)
 
 
@@ -895,7 +898,7 @@ class DBSQLOperations:
                 sql_column = column_field.type.SUBTYPE
 
 
-            elif issubclass(column_field.type, enum.Enum):
+            elif inspect.isclass(column_field.type) and issubclass(column_field.type, enum.Enum):
                 if issubclass(column_field.type, enum.IntEnum):
                     sql_column = "INT"
                 else:
