@@ -795,8 +795,9 @@ class DBConnection:
         return self._conn_
 
     @property
-    def direct(self):
-        return self._conn_
+    def direct(self, sql, *args):
+        return self._conn_.cursor().execute(sql, *args) if args else self._conn_.cursor().execute(sql)
+
 
     @property
     def tables(self):
