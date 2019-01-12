@@ -794,7 +794,7 @@ class DBConnection:
     def handle(self):
         return self._conn_
 
-    @property
+
     def direct(self, sql, *args):
         return self._conn_.cursor().execute(sql, *args) if args else self._conn_.cursor().execute(sql)
 
