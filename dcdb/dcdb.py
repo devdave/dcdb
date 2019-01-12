@@ -624,6 +624,9 @@ class AutoList:
 
         return self.__cache
 
+    def reset(self):
+        self.__cache = None
+
 
 @dcs.dataclass
 class ColumnDef:
