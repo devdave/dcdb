@@ -415,6 +415,8 @@ class ProxyList(list):
         LOG.debug(record, self.owner, self.auto_list)
         return self.auto_list.remove(self.owner, record)
 
+    def reset(self):
+        self.auto_list.reset()
 
 
 class AutoOperator:
