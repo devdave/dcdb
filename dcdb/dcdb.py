@@ -1007,8 +1007,7 @@ class DBSQLOperations:
         field_values = {}
         params = {k[1:]: v for k, v in values.items() if k[0] == "_"}
 
-        for k, v in values.items():
-            if k.startswith("_"): continue
+        for k, v in {k:v for k, v in values.items() if k.startswith("_") is False}.items():
             field_values[k] = cast_to_database(v, dc_fields[k].type, )
 
         if isinstance(where, list):
