@@ -583,6 +583,64 @@ def test_AutoSelect___works(connection):
     assert child_record.parent_id is None
 
 
+def test_NamedSelect__works(connection:dcdb.DBConnection):
+
+    @dataclass()
+    class House:
+        price: float
+        name: str
+        furniture = dcdb.DictSelect("Furniture", "type", "house_id")
+
+    @dataclass()
+    class Furniture:
+
+        type: str
+        material: str
+        quantity: int
+
+        house_id: int = None  # TODO foreign key constraint
+
+    # setup
+    connection.binds(House, Furniture)
+    house = connection.t.House(price=123.45, name="The Manor")
+
+
+    #Ensure relationship is bound on direct creation
+    house.furniture.create(type="Chair", material="Wood", quantity=10)
+    assert len(house.furniture) == 1
+    assert house.furniture["chair"] is None
+    assert house.furniture["Chair"].material == "Wood"
+
+    #ensure binding is independant
+    sofa = connection.t.Furniture(type="Sofa", material="cloth", quantity=2)
+    assert len(house.furniture) == 1
+
+    #test count and retrieval
+    house.furniture.add(sofa)
+    assert len(house.furniture) == 2
+    assert house.furniture["Sofa"].quantity == 2
+
+    #verify integrity
+    keys = house.furniture.keys()
+    assert "Sofa" in keys
+    assert "Chair" in keys
+
+    #
+    del house.furniture['Chair']
+    furniture_count = connection.direct("SELECT count(*) FROM Furniture").fetchone()[0]
+    assert furniture_count == 2
+    assert len(house.furniture) == 1
+
+
+
+
+
+
+
+
+
+
+
 
 def test_DBCommonTable___fix_error_columns_mismatch(conn2):
     """

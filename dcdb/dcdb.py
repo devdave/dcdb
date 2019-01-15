@@ -349,6 +349,65 @@ class RelationshipHandler(list):
             raise ValueError(f"{key} index error: have {[(pos, i.id,) for pos, i in enumerate(self)]}")
 
 
+class DictSelect(collections.abc.MutableMapping):
+
+
+    def __init__(self, child_name, name_field = None, relationship_field=None, parent_join_field="id"):
+        if name_field is None:
+            if "." not in child_name:
+                raise TypeError(f"child_field is None but child_table {child_name} "
+                                "field does not match table.field format")
+            else:
+                child_name, name_field = child_name.split(".")
+
+        self.tables = None
+
+        self.child_name = child_name
+        self.name_field = name_field
+        self.relationship_field = relationship_field
+        self.child_cls = None
+
+        self.parent_name = None
+        self.parent_join_field = parent_join_field
+        self.parent = None
+
+    def initialize(self, parent:DBCommonTable, tables:DBRegisteredTable):
+        if self.parent is None:
+            self.parent = parent
+            self.tables = tables
+        else:
+            raise IntegrityError(f"Attempting to re-intialize DictSelect property: {self.parent}")
+
+        self.child = tables[self.child_name]
+
+
+    def  __getitem__(self, key):
+        return self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"
+                                 f" AND {self.name_field}=?", key).fetchone()
+
+    def __setitem__(self, key, record:DBCommonTable):
+        record[self.relationship_field] = self.parent[self.parent_join_field]
+        record.save()
+
+    def add(self, record):
+        record[self.relationship_field] = self.parent[self.parent_join_field]
+        record.save()
+
+    def create(self, **new_record_args):
+        new_record_args[self.relationship_field] = self.parent[self.parent_join_field]
+        return self.child(**new_record_args)
+
+    def __delitem__(self, key):
+        record = self[key]
+        record[self.relationship_field] = None
+        record.save()
+
+    def __iter__(self):
+        for record in self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"):
+            yield record
+
+    def __len__(self):
+        return self.child.Count(f"{self.relationship_field}={self.parent[self.parent_join_field]}")
 
 
 class AutoSelect:
@@ -1136,13 +1195,16 @@ class DBCommonTable(DBDirtyRecordMixin):
         # Post processing to convert from DB to Application
         for field in self._meta_.fields.values():
             if field.name == "id": continue
-            # if issubclass(field.type, TableDef):
-            #     raise Warning(f"TableDef leaked through on {self}")
 
             # avoid mutation tracking as much as possible
             orig_value = getattr(self, field.name)
             value = cast_from_database(orig_value, field.type)
             super().__setattr__(field.name, value)
+
+        for name, prop in [(n, getattr(self,n),) for n in dir(self) if n[0] != "_"]:
+            if isinstance(prop, DictSelect):
+                prop.initialize(self, self.tables)
+
 
         # super().__post_init__()
         self._init_dirty_record_tracking_()
