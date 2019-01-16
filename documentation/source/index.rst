@@ -14,6 +14,23 @@ Welcome to DCDB's documentation!
 .. automodule:: dcdb.dcdb
 
 
+Define a table/model
+====================
+
+```
+@dataclass
+class Foo:
+   a_number: int
+   text: str
+
+connection = dcdb.DBConnection("file_path/mydb.sqlite3")
+connection.bind(Foo)
+```
+Creates the sqlite table Foo with columns `a_number` and `text`.
+
+
+
+
 Indices and tables
 ==================
 
