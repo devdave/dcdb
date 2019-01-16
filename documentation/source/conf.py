@@ -40,15 +40,16 @@ release = '0.dev.2018.12.6'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.imgmath',
-    'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    "sphinx.ext.inheritance_diagram",
-    "sphinx.ext.todo"
+    'sphinx.ext.autodoc'
+    ,    'sphinx.ext.todo'
+    ,    'sphinx.ext.coverage'
+    ,    'sphinx.ext.imgmath'
+    ,    'sphinx.ext.ifconfig'
+    ,    'sphinx.ext.viewcode'
+    ,    'sphinx.ext.githubpages'
+    ,    "sphinx.ext.inheritance_diagram"
+    ,    "sphinx.ext.todo"
+    , 'sphinx_markdown_builder'
 
 ]
 
