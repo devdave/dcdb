@@ -510,6 +510,10 @@ class AutoSelect:
     def __delete__(self, obj):
         setattr(obj, self.__source_column, None)
 
+class RelationshipFields:
+    dict = DictSelect
+    unordered_list = ListSelect
+    one_to_one = AutoSelect
 
 class ProxyList(list):
 

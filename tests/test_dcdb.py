@@ -553,6 +553,7 @@ def test_DBTableRegistry___tables_direct_children(connection):
 
 
 
+
 def test_AutoSelect___works(connection):
 
     @dataclass()
@@ -590,7 +591,7 @@ def test_RelationshipFields_dot_dict__works(connection:dcdb.DBConnection):
     class House:
         price: float
         name: str
-        furniture = dcdb.DictSelect("Furniture", "type", "house_id")
+        furniture = dcdb.RelationshipFields.dict("Furniture", "type", "house_id")
 
     @dataclass()
     class Furniture:
@@ -640,7 +641,7 @@ def test_RelationshipFields_dict__dotted_argument(connection):
     class House:
         price: float
         name: str
-        furniture = dcdb.DictSelect("Furniture.type", "house_id")
+        furniture = dcdb.RelationshipFields.dict("Furniture.type", "house_id")
 
     @dataclass()
     class Furniture:
