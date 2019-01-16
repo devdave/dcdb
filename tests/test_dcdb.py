@@ -583,7 +583,7 @@ def test_AutoSelect___works(connection):
     assert child_record.parent_id is None
 
 
-def test_NamedSelect__works(connection:dcdb.DBConnection):
+def test_DictSelect__works(connection:dcdb.DBConnection):
 
     @dataclass()
     class House:
