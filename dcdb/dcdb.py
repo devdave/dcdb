@@ -352,18 +352,22 @@ class RelationshipHandler(list):
 
 class ListSelect(collections.abc.Sequence):
 
-    def __init__(self, child_name, relationship_field, parent_join_field="id", where=None):
+    def __init__(self, child_name, relationship_field, parent_join_field="id", where=None, add_set=None, remove_set=None):
 
         self.tables = None
         self.__where = where
+        self._add_set = add_set
+        self._remove_set = remove_set
 
         self.child_name = child_name
         self.relationship_field = relationship_field
-        self.child_cls = None
+        self.child = None # type: DBCommonTable
 
         self.parent_name = None
         self.parent_join_field = parent_join_field
         self.parent = None
+
+
 
     @property
     def _where(self):
@@ -391,15 +395,50 @@ class ListSelect(collections.abc.Sequence):
         records - self._select(item)
         return records[item]
 
-    def __setitem__(self, _:int, value:DBCommonTable):
+    def __setitem__(self, _:int, record:DBCommonTable):
         # Ignore requested ordering for an OrderedRelationship field
-        value[self.relationship_field] = self.parent[self.parent_join_field]
-        value.save()
+        record[self.relationship_field] = self.parent[self.parent_join_field]
+        if self._add_set:
+            record[self._add_set[0]] = self._add_set[1]
+        record.save()
+
+    def __iadd__(self, other):
+        #TODO really need Transactions
+        for record in other:
+            record[self.relationship_field] = self.parent[self.parent_join_field]
+            if self._add_set:
+                record[self._add_set[0]] = self._add_set[1]
+            record.save()
+
+        return self
 
     def __delitem__(self, key:int):
         records = self._select(key)
         records[key][self.relationship_field] = None
+        if self._remove_set:
+            records[key][sef._remove_set[0]] = self._remove_set[1]
         records[key].save()
+
+    def pop(self, index):
+
+        if isinstance(index, int):
+            record = self._select(index).fetchone()
+        else:
+            record = index
+
+        record[self.relationship_field] = None
+        if self._remove_set:
+            record[self._remove_set[0]] = self._remove_set[1]
+            record.save()
+        return record
+
+    def remove(self, record):
+        record[self.relationship_field] = None
+        if self._remove_set:
+            record[self._remove_set[0]] = self._remove_set[1]
+
+        record.save()
+        return record
 
     def __len__(self):
         return self.child.Count(self._where, self.parent[self.parent_join_field])

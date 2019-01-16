@@ -774,7 +774,8 @@ def test_dcdb__cast_to_database_AND_cast_from_database___column_as_enum(connecti
 
 
 
-def test_AutoList___works(connection):
+def test_RelationshipFields_DOT_unordered_list___works_and_replaces_AutoList(connection):
+
     import enum
 
     class ChildTableStatus(enum.IntEnum):
@@ -783,7 +784,7 @@ def test_AutoList___works(connection):
 
         @classmethod
         def To(cls, value, _):
-            return value.value
+            return value.value if not isinstance(value, int) else value
 
         @classmethod
         def From(cls, value, _):
@@ -794,41 +795,19 @@ def test_AutoList___works(connection):
 
         name: str
 
-        Steves = dcdb.AutoList(["Parent", "id"], ["Children", "parent_id"])
-        Steves.where(
-            "name LIKE 'Steve%'",
-        )
+        Steves = dcdb.RelationshipFields.unordered_list("Children", "parent_id", where="name LIKE 'Steve%'")
 
-        Pending = dcdb.AutoList(["Parent", "id"], ["Children", "parent_id"])
-        Pending.where(
-            "parent_id = {parent.id}",
-            ["status = {0}", ChildTableStatus.PENDING.value]
-        )
+        Pending = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
+                                                         , where=f"status = {ChildTableStatus.PENDING.value}"
+                                                         , add_set = ("status", ChildTableStatus.PENDING.value,)
+                                                         , remove_set = ("status", ChildTableStatus.PENDING.value,)
+                                                         )
 
-        @Pending.creator
-        def Pending(self, parent_record, child_table, **kwargs):
-            kwargs['status'] = ChildTableStatus.PENDING.value
-            kwargs['parent_id'] = parent_record.id
-            return child_table.Insert(**kwargs)
-
-        @Pending.adder
-        def Pending(self, parent_record, child_record):
-            child_record['parent_id'] = parent_record.id
-            child_record.update()
-            return child_record
-
-        @Pending.remover
-        def Pending(self, parent_table, child_record):
-            LOG.debug(self, parent_table, child_record)
-            child_record['parent_id'] = None
-            child_record.update()
-            return child_record
-
-        Complete = dcdb.AutoList(["Parent", "id"], ["Children","parent_id"])
-        Complete.where(
-            "parent_id = {parent.id}",
-            ["status = {0}", ChildTableStatus.COMPLETE.value]
-        )
+        Complete = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
+                                                         , where=f"status = {ChildTableStatus.COMPLETE.value}"
+                                                         , add_set = ("status", ChildTableStatus.COMPLETE.value,)
+                                                         , remove_set= ("status", ChildTableStatus.PENDING.value,)
+                                                         )
 
 
     @dataclass()
@@ -861,13 +840,13 @@ def test_AutoList___works(connection):
 
     result = bob.Pending
     assert len(result) == 0
-    bob.Pending.add(steve, stjr, joe, joejr)
+    bob.Pending += [steve, stjr, joe, joejr]
     assert len(bob.Pending) == 4
-    bob.Pending.remove(joe)
+    bob.Pending.pop(joe)
     assert len(bob.Pending) == 3
     assert len(bob.Steves) == 2
 
-    bob.Complete.add(carl, alice, smith)
+    bob.Complete += [carl, alice, smith]
     assert len(bob.Complete) == 3
     bob.Complete.remove(alice)
     assert len(bob.Complete) == 2
