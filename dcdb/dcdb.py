@@ -349,6 +349,62 @@ class RelationshipHandler(list):
             raise ValueError(f"{key} index error: have {[(pos, i.id,) for pos, i in enumerate(self)]}")
 
 
+class ListSelect(collections.abc.Sequence):
+
+    def __init__(self, child_name, relationship_field, parent_join_field="id"):
+
+        self.tables = None
+
+        self.child_name = child_name
+        self.relationship_field = relationship_field
+        self.child_cls = None
+
+        self.parent_name = None
+        self.parent_join_field = parent_join_field
+        self.parent = None
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+
+        if self.parent is None:
+            self.parent = instance
+            self.tables = instance.tables
+            self.child = self.tables[self.child_name]
+
+        return self
+
+    def _select(self, index):
+        return self.child.Select(f"{self.relationship_field}=?", self.parent[self.parent_join_field])
+
+    def __getitem__(self, index:int):
+        #TODO use LIMIT condition with select for efficiency
+        records - self._select(item)
+        return records[item]
+
+    def __setitem__(self, _:int, value:DBCommonTable):
+        # Ignore requested ordering for an OrderedRelationship field
+        value[self.relationship_field] = self.parent[self.parent_join_field]
+        value.save()
+
+    def __delitem__(self, key:int):
+        records = self._select()
+        records[key][self.relationship_field] = None
+        records[key].save()
+
+    def __len__(self):
+        return self.child.Count(f"{self.relationship_field}=?", self.parent[self.parent_join_field])
+
+    def insert(self, record:DBCommonTable):
+        record[self.relationship_field] = self.parent[self.parent_join_field]
+        record.save()
+
+    def create(self, **kwargs):
+        kwargs[self.relationship_field] = self.parent[self.parent_join_field]
+        return self.child(**kwargs)
+
+
+
 class DictSelect(collections.abc.MutableMapping):
 
 
