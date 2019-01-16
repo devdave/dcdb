@@ -322,6 +322,7 @@ class RelationshipHandler(list):
     def __init__(self, parent_cls, child_cls, parent_id, get_expr, set_expr):
         self.parent = parent_cls
         self.child_cls = child_cls
+        raise DeprecationWarning("No longer used")
         super().__init__([])
 
     def add(self, child_record):
