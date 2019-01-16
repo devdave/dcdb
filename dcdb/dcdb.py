@@ -373,15 +373,16 @@ class DictSelect(collections.abc.MutableMapping):
         self.parent_join_field = parent_join_field
         self.parent = None
 
-    def initialize(self, parent:DBCommonTable, tables:DBRegisteredTable):
+    def __get__(self, instance:DBCommonTable, owner:type):
+        if instance is None:
+            return self
+
         if self.parent is None:
-            self.parent = parent
-            self.tables = tables
-        else:
-            raise IntegrityError(f"Attempting to re-intialize DictSelect property: {self.parent}")
+            self.parent = instance
+            self.tables = instance.tables
+            self.child = self.tables[self.child_name]
 
-        self.child = tables[self.child_name]
-
+        return self
 
     def  __getitem__(self, key):
         return self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"
@@ -1202,11 +1203,6 @@ class DBCommonTable(DBDirtyRecordMixin):
             orig_value = getattr(self, field.name)
             value = cast_from_database(orig_value, field.type)
             super().__setattr__(field.name, value)
-
-        for name, prop in [(n, getattr(self,n),) for n in dir(self) if n[0] != "_"]:
-            if isinstance(prop, DictSelect):
-                prop.initialize(self, self.tables)
-
 
         # super().__post_init__()
         self._init_dirty_record_tracking_()
