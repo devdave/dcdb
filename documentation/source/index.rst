@@ -17,15 +17,15 @@ Welcome to DCDB's documentation!
 Define a table/model
 ====================
 
-```
-@dataclass
-class Foo:
-   a_number: int
-   text: str
+.. code-block:: python
+   @dataclass
+   class Foo:
+      a_number: int
+      text: str
 
-connection = dcdb.DBConnection("file_path/mydb.sqlite3")
-connection.bind(Foo)
-```
+   connection = dcdb.DBConnection("file_path/mydb.sqlite3")
+   connection.bind(Foo)
+
 Creates the sqlite table Foo with columns `a_number` and `text`.
 
 
