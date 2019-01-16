@@ -353,11 +353,13 @@ class DictSelect(collections.abc.MutableMapping):
 
 
     def __init__(self, child_name, name_field = None, relationship_field=None, parent_join_field="id"):
-        if name_field is None:
+
+        if relationship_field is None:
             if "." not in child_name:
                 raise TypeError(f"child_field is None but child_table {child_name} "
                                 "field does not match table.field format")
             else:
+                relationship_field = name_field
                 child_name, name_field = child_name.split(".")
 
         self.tables = None

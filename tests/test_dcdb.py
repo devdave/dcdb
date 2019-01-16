@@ -633,6 +633,31 @@ def test_NamedSelect__works(connection:dcdb.DBConnection):
 
 
 
+def test_DictSelect__dotted_argument(connection):
+
+    @dataclass()
+    class House:
+        price: float
+        name: str
+        furniture = dcdb.DictSelect("Furniture.type", "house_id")
+
+    @dataclass()
+    class Furniture:
+        type: str
+        material: str
+        quantity: int
+
+        house_id: int = None  # TODO foreign key constraint
+
+    # setup
+    connection.binds(House, Furniture)
+    house = connection.t.House(price=123.45, name="The Manor")
+
+    house.furniture.create(type="Bed", material="down", quantity=1)
+
+    assert len(house.furniture) == 1
+    assert house.furniture['Bed'].material == "down"
+
 
 
 
