@@ -592,6 +592,8 @@ class AutoList:
     def __init__(self, parent, child, owner=None, conditions=None, orderby=None, creator=None, adder=None,
                  remover=None, __cache=None):
 
+        raise DeprecationWarning("Should no longer be used")
+
         if isinstance(parent, list):
             self.__parent_table = TableSpec(parent[0], parent[1])
         elif isinstance(parent, str):
