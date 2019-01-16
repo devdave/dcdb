@@ -788,6 +788,7 @@ def test_RelationshipFields_DOT_unordered_list___works_and_replaces_AutoList(con
 
         @classmethod
         def From(cls, value, _):
+
             return cls(int(value))
 
     @dataclass()

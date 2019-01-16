@@ -388,7 +388,7 @@ class ListSelect(collections.abc.Sequence):
 
     def _select(self, index)->DBCursorProxy:
 
-        return self.child.Select(self._where, self.parent[self.parent_join_field])
+        return self.child.Select(self._where, self.parent[self.parent_join_field], limit_offset=index)
 
     def __getitem__(self, index:int):
         #TODO use LIMIT condition with select for efficiency
@@ -1162,13 +1162,19 @@ class DBSQLOperations:
 
     @classmethod
     def Select(cls, connection, table_name, where=None, *where_vals, **params):
+
+        append = ""
+        if "limit_offset" in params and "limit_count" not in params:
+            append += f" LIMIT -1 OFFSET {params['limit_offset']} "
+
+
         sql = f"""
             SELECT
                 {params['columns'] if "columns" in params else '*'}
             FROM {table_name}
             {"WHERE" if where else ""}
                 {where if where else ''}
-            {params['append'] if 'append' in params else ""}
+            {append}
         """.strip()
 
         if where and where_vals:
