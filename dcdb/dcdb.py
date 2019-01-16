@@ -396,7 +396,7 @@ class ListSelect(collections.abc.Sequence):
         value.save()
 
     def __delitem__(self, key:int):
-        records = self._select()
+        records = self._select(key)
         records[key][self.relationship_field] = None
         records[key].save()
 
