@@ -507,11 +507,6 @@ class AutoTerm:
 TableSpec = collections.namedtuple("TableSpec", "name, column")
 
 
-class AutoDict:
-    """
-
-    """
-
 class AutoList:
     """
 
