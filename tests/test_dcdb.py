@@ -583,7 +583,8 @@ def test_AutoSelect___works(connection):
     assert child_record.parent_id is None
 
 
-def test_DictSelect__works(connection:dcdb.DBConnection):
+
+def test_RelationshipFields_dot_dict__works(connection:dcdb.DBConnection):
 
     @dataclass()
     class House:
@@ -633,7 +634,7 @@ def test_DictSelect__works(connection:dcdb.DBConnection):
 
 
 
-def test_DictSelect__dotted_argument(connection):
+def test_RelationshipFields_dict__dotted_argument(connection):
 
     @dataclass()
     class House:
