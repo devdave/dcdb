@@ -351,9 +351,10 @@ class RelationshipHandler(list):
 
 class ListSelect(collections.abc.Sequence):
 
-    def __init__(self, child_name, relationship_field, parent_join_field="id"):
+    def __init__(self, child_name, relationship_field, parent_join_field="id", where=None):
 
         self.tables = None
+        self.__where = where
 
         self.child_name = child_name
         self.relationship_field = relationship_field
@@ -362,6 +363,12 @@ class ListSelect(collections.abc.Sequence):
         self.parent_name = None
         self.parent_join_field = parent_join_field
         self.parent = None
+
+    @property
+    def _where(self):
+        return f"{self.relationship_field}=?" \
+            if self.__where is None \
+            else f"{self.relationship_field}=? AND {self.__where}"
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -374,8 +381,9 @@ class ListSelect(collections.abc.Sequence):
 
         return self
 
-    def _select(self, index):
-        return self.child.Select(f"{self.relationship_field}=?", self.parent[self.parent_join_field])
+    def _select(self, index)->DBCursorProxy:
+
+        return self.child.Select(self._where, self.parent[self.parent_join_field])
 
     def __getitem__(self, index:int):
         #TODO use LIMIT condition with select for efficiency
@@ -393,7 +401,7 @@ class ListSelect(collections.abc.Sequence):
         records[key].save()
 
     def __len__(self):
-        return self.child.Count(f"{self.relationship_field}=?", self.parent[self.parent_join_field])
+        return self.child.Count(self._where, self.parent[self.parent_join_field])
 
     def insert(self, record:DBCommonTable):
         record[self.relationship_field] = self.parent[self.parent_join_field]
