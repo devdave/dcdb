@@ -411,6 +411,15 @@ class ListSelect(collections.abc.Sequence):
         kwargs[self.relationship_field] = self.parent[self.parent_join_field]
         return self.child(**kwargs)
 
+    def first(self)->DBCommonTable:
+        """
+        Shortcut helper to fetch the first related record
+
+        TODO deprecate?
+        :return:
+        """
+        return self._select(0).fetchone()
+
 
 
 class DictSelect(collections.abc.MutableMapping):
