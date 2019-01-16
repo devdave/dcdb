@@ -871,12 +871,13 @@ def test_AutoList___works(connection):
     assert len(bob.Complete) == 2
 
 
-def test_AutoList_dotted_relations(connection):
+
+def test_RelationshipFields_DOT_unordered_list__dotted_relations(connection):
 
     @dataclass()
     class Boss:
         name: str
-        employees = dcdb.AutoList("Boss.id", "Employee.boss_id")
+        employees = dcdb.RelationshipFields.unordered_list("Employee", "boss_id")
 
     @dataclass()
     class Employee:
@@ -886,14 +887,19 @@ def test_AutoList_dotted_relations(connection):
 
     connection.bind_scan(locals())
 
-    boss = connection.t.Boss.Create(name="Bill")
+    boss = connection.t.Boss(name="Bill")
 
-    emp1 = connection.t.Employee.Create(name="Joe",age=12)
-    emp2 = connection.t.Employee.Create(name="Al", age=22)
-    emp3 = connection.t.Employee.Create(name="Jane", age=30)
-    emp4 = connection.t.Employee.Create(name="Friday",age=28)
+    emp1 = connection.t.Employee(name="Joe", age=12)
+    emp2 = connection.t.Employee(name="Al", age=22)
+    emp3 = connection.t.Employee(name="Jane", age=30)
+    emp4 = connection.t.Employee(name="Friday", age=28)
 
-    boss.employees.add(emp1, emp2, emp4)
+    boss.employees.insert(emp1)
+    boss.employees.insert(emp2)
+    boss.employees.insert(emp3)
+
+    assert len(boss.employees) == 3
+    assert connection.t.Employee.Count() == 4
 
 
 def test_AutoKeyedList__works(connection):
