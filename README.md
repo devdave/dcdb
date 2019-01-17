@@ -100,7 +100,142 @@ assert my_record.stuff == {"hello":"world", 9:"This is pickled so numeric indexe
 record.delete()
 # Note that my_record would still be valid and would undo the prior delete if update() or save() was called.
 
+```
 
- 
+## Copied from sphinx markdown file
+
+# Define a table/model
+
+
+@dataclass
+class Foo:
+   a_number: int
+   text: str
+
+connection = dcdb.DBConnection("file_path/mydb.sqlite3")
+connection.bind(Foo)
+```
+
+Creates the sqlite table Foo with columns  and .
+
+# Create and retrieve a record
+
+```
+@dataclass
+class Foo:
+   a_number: int
+   text: str
+
+connection = dcdb.DBConnection("file_path/mydb.sqlite3")
+connection.bind(Foo)
+
+record = connection.tables.Foo(a_number=123, text="Hello world")
+# record is automatically saved to database on creation
+same_record = connect.tables.Foo.Select("a_number=?", 123)
+assert same_record.id == record.id # True
+assert same_record.text == "Hello World" # True
+```
+
+# DCDB module
+
+## DB DataClass abstraction layer
+
+Version: Super Alpha
+
+turns
+
+```
+@dataclass
+class Something:
+    name: str
+    age: int
+    species: str = "Human"
+```
+
+into
+
+```
+CREATE TABLE IF NOT EXISTS Something (
+    name TEXT NOT NULL,
+    age TEXT NOT NULL,
+    species TEXT DEFAULT VALUE Human
+)
+```
+
+### Quick start
+
+```
+import dcdb
+from dataclasses import dataclass
+
+
+@dataclass
+class Something:
+    name: str
+    age: int
+    species: str = "Human"
+
+
+connection = dcdb.DBConnection(":memory")
+connection.bind(Something)
+record = connection.tables.Something.Create(name="Bob", age="33", species="Code monkey")
+
+#To fetch a record, you use pure SQL syntax to make the WHERE clause of a select
+same_record = connection.tables.Something.Get("name=?", "Bob")
+
+some_record.age = 13
+
+#Note while record and some_record were the same record
+record.update() # blows away the change to `.age`
+#while
+some_record.update() # would update age to 13
+```
+
+The record has been automatically inserted into the database with a  property set to the relevant row in the
+Something table.
+
+### Goals
+
+> 1.  is meant to be a dirt-simple way of saving data to a sqlite table.   Some features, like Joins, are planned
+> but that is going to take a while.
+> 2.  makes no effort to prevent a user from shooting themselves in the foot.  If you grab two copies of the same
+> record, as pointed out above, you can lose data if you lose track of them.
+> 3. No dsl’s.   if you have to do  or something crazier like
+>  that is insane.  I have known SQL since the 90’s and last thing I want is to learn
+> some other quasi-language dialect.
+> > * Immediate consequence is a loss of compatibility.
+> >   :   MS SQL and MySQL may have SQL in their names but
+> >       both have some interesting quirks that make them not friends.
+
+### TODO
+
+1. Cleanup the structure of the package
+    * Remove RegisteredTable
+    * cut down on __getattr_ calls, if it takes more than one call to reach a resource, that is two much
+1. Trim out repetitive parameters
+
+1. Restore positional record/object creation
+
+1. Restore transaction logic
+
+1. Figureout to make AutoList less “goofy”
+
+1. clean up the unit-tests, change naming to test_class/function_case_name
+
+   :   * Split tests apart and make them smaller
+
+       * Review and make classic unit test class’s as appropriate
+
+### Current capabilities
+
+1. Create
+1. Select
+
+   :   * alternatively Get can be used to fetch a single record.
+
+1. delete 
+1. update/save
+1. Relationship helpers through RelationshipFields
+
 
 ```
