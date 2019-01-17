@@ -425,18 +425,22 @@ class ListSelect(collections.abc.Sequence):
         if self.parent is None:
             self.parent = instance
             self.tables = instance.tables
-            self.child = self.tables[self.child_name]
+
 
         return self
 
+    @property
+    def child_cls(self):
+        return self.tables[self.child_name]
+
     def _select(self, index)->DBCursorProxy:
 
-        return self.child.Select(self._where, self.parent[self.parent_join_field], limit_offset=index)
+        return self.child_cls.Select(self._where, self.parent[self.parent_join_field], limit_offset=index)
 
     def __getitem__(self, index:int):
         #TODO use LIMIT condition with select for efficiency
-        records - self._select(item)
-        return records[item]
+        records - self._select(index)
+        return records.fetchone()
 
     def __setitem__(self, _:int, record:DBCommonTable):
         # Ignore requested ordering for an OrderedRelationship field
@@ -484,7 +488,7 @@ class ListSelect(collections.abc.Sequence):
         return record
 
     def __len__(self):
-        return self.child.Count(self._where, self.parent[self.parent_join_field])
+        return self.child_cls.Count(self._where, self.parent[self.parent_join_field])
 
     def insert(self, record:DBCommonTable):
         record[self.relationship_field] = self.parent[self.parent_join_field]
@@ -492,7 +496,7 @@ class ListSelect(collections.abc.Sequence):
 
     def create(self, **kwargs):
         kwargs[self.relationship_field] = self.parent[self.parent_join_field]
-        return self.child(**kwargs)
+        return self.child_cls(**kwargs)
 
     def first(self)->DBCommonTable:
         """
@@ -619,7 +623,7 @@ class ProxyList(list):
 
     def _set_owner(self, auto_list: AutoList, owner: DBCommonTable) -> None:
         self.auto_list = auto_list
-        self.owner = weakref.proxy(owner)
+        self.owner = owner
 
     def __call__(self, *args, **kwargs) -> DBCommonTable:
         LOG.debug(f"{args!r} {kwargs!r}")
@@ -980,7 +984,7 @@ class DBConnection:
             if create_table:
                 bound_class._DRV.Create_table(self, bound_class, bound_class._meta_.name)
 
-            collect.append(weakref.proxy(bound_class))
+            collect.append(bound_class)
 
         if len(tables) == 1:
             return collect[0]
@@ -1568,7 +1572,7 @@ class TablesRegistry:
 
         fields = {f.name: f for f in db_cls_fields}
         set_default("_meta_", DBMeta(self._connection, name, fields, {}))
-        set_default("tables", weakref.proxy(self))
+        set_default("tables", self)
         set_default("_original_", source_cls)
         set_default("_DRV", DBSQLOperations)
 
@@ -1578,7 +1582,7 @@ class TablesRegistry:
     def get_table(self, table_name: str) -> DBCommonTable:
         if (table_name in self._registry) is False:
             raise RuntimeError(f"Missing table {table_name!r} requested.  Tables available: {self._registry.keys()!r}")
-        return weakref.proxy(self._registry.get(table_name))
+        return self._registry.get(table_name)
 
     __getattr__ = get_table
     __getitem__ = get_table
