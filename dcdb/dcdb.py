@@ -886,7 +886,7 @@ class DBConnection:
     __slots__ = ("closed",
                  "dburl",
                  "_conn_",
-                 "_tables", "t", "registry",
+                 "_tables", "tables", "t", "registry",
                  "_dirty_records", "_dirty_records_track_changes",
                  #I find this so bizarre in a way but it makes a sense, of sorts, that I need to add this
                  "__weakref__"
@@ -911,6 +911,8 @@ class DBConnection:
         registry = TablesRegistry(self)
         self.registry = registry
         self._tables = registry
+        setattr(self, "tables", weakref.proxy(self._tables))
+        setattr(self, "t", weakref.proxy(self._tables))
         self.t = registry
         self._dirty_records = set()
         self._dirty_records_track_changes = False
@@ -1027,9 +1029,9 @@ class DBConnection:
         return self._conn_.cursor().execute(sql, *args) if args else self._conn_.cursor().execute(sql)
 
 
-    @property
-    def tables(self):
-        return self._tables
+    # @property
+    # def tables(self):
+    #     return self._tables
 
     @property
     def cursor(self):
@@ -1489,7 +1491,7 @@ class TablesRegistry:
 
     """
 
-    __slots__ = ("_registry", "_connection", "__weakref__")
+
 
     def __init__(self, connection):
         self._registry: {str: DBCommonTable} = dict()
@@ -1534,6 +1536,7 @@ class TablesRegistry:
         db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields)
 
         self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._meta_.fields)
+        setattr(self, name, self._registry[name]) #test to cut down on __getattr__ calls
         return db_cls
 
 
