@@ -258,7 +258,7 @@ def cast_from_database(value: object, value_type: type):
     return retval
 
 
-def cast_to_database(value, value_type: type) -> str:
+def cast_to_database(value:typing.Any, value_type: typing.Union[type,object]) -> str:
     """
     Converts the basic types to something compatible with the database
 
@@ -304,7 +304,7 @@ class ColumnTransformer(metaclass=abc.ABCMeta):
     pass
 
 
-class FieldPickled(ColumnTransformer):
+class FieldPickled(AbstractTransformedClass):
     """
 
         Given::
@@ -337,7 +337,7 @@ class FieldPickled(ColumnTransformer):
     def To(cls, value: dict, value_type):
         return pickle.dumps(value)
 
-class FieldJSON:
+class FieldJSON(AbstractTransformedClass):
 
     SUBTYPE = "TEXT"
 
