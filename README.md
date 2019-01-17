@@ -106,7 +106,7 @@ record.delete()
 
 # Define a table/model
 
-
+```
 @dataclass
 class Foo:
    a_number: int
