@@ -126,6 +126,7 @@ import weakref
 import datetime as dt
 import inspect
 import typing
+import abc
 
 LOG = logging.getLogger(__name__)
 
@@ -133,6 +134,20 @@ LOG = logging.getLogger(__name__)
 IntegrityError = sqlite3.IntegrityError
 
 ConverterPair = namedtuple("ConverterPair", "To,From")
+
+
+class AbstractTransformedClass(abc.ABC):
+
+    @classmethod
+    @abc.abstractmethod
+    def From(cls, value: str, value_type: typing.Union[object, type])->object:
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def To(cls, value: typing.Any, value_type: typing.Union(typing.Any))->str:
+        pass
+
 
 class Transformers:
     """
@@ -159,7 +174,9 @@ class Transformers:
     _transforms = {}
 
     @classmethod
-    def Set(cls, transform_type, to_func:callable, from_func:callable) -> None:
+    def Set(cls, transform_type
+            , to_func:typing.Callable[typing.Any, typing.Union[type,object]]
+            , from_func:typing.Callable[typing.Any, typing.Union[type,object]]) -> None:
         """
         :param transform_type class or builtin type:
         :param to_func callable(value, transform_type):
