@@ -145,7 +145,7 @@ class AbstractTransformedClass(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def To(cls, value: typing.Any, value_type: typing.Union(typing.Any))->str:
+    def To(cls, value: typing.Any, value_type: typing.Union[type, typing.Any])->str:
         pass
 
 
