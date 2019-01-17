@@ -106,7 +106,7 @@ record.delete()
 
 # Define a table/model
 
-```
+```python
 @dataclass
 class Foo:
    a_number: int
@@ -120,7 +120,7 @@ Creates the sqlite table Foo with columns  and .
 
 # Create and retrieve a record
 
-```
+```python
 @dataclass
 class Foo:
    a_number: int
@@ -144,7 +144,7 @@ Version: Super Alpha
 
 turns
 
-```
+```python
 @dataclass
 class Something:
     name: str
@@ -154,7 +154,7 @@ class Something:
 
 into
 
-```
+```sql
 CREATE TABLE IF NOT EXISTS Something (
     name TEXT NOT NULL,
     age TEXT NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS Something (
 
 ### Quick start
 
-```
+```python
 import dcdb
 from dataclasses import dataclass
 
@@ -218,7 +218,7 @@ Something table.
 
 1. Restore transaction logic
 
-1. Figureout to make AutoList less “goofy”
+1. Figure out to make AutoList less “goofy”
 
 1. clean up the unit-tests, change naming to test_class/function_case_name
 
