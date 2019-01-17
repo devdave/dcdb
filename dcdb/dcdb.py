@@ -135,10 +135,36 @@ IntegrityError = sqlite3.IntegrityError
 ConverterPair = namedtuple("ConverterPair", "To,From")
 
 class Transformers:
+    """
+    Global level registry for transformers
+
+    .. code-block:: python
+
+        import decimal
+
+        Transformer.Set(decimal.Decimal, v,vt: str(v), v,vt: vt(v))
+
+    is one way to ensure that ALL Table Models that have a attribute/column of type `decimal.Decimal`
+    are converted to and from the database.
+
+    !NOTE!
+    ------
+
+    If decimal.Decimal uses a non-default precision argument, that will be lost in transformation from the database
+    and for the moment I don't have an easy solution besides making your own DecimalTransformer class with matching
+    To/From classmethods.
+
+
+    """
     _transforms = {}
 
     @classmethod
-    def Set(cls, transform_type, to_func, from_func):
+    def Set(cls, transform_type, to_func:callable, from_func:callable) -> None:
+        """
+        :param transform_type class or builtin type:
+        :param to_func callable(value, transform_type):
+        :param from_func callable(value, transform_type):
+        """
         cls._transforms[transform_type] = ConverterPair(to_func, from_func)
 
     @classmethod
