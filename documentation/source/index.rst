@@ -10,14 +10,15 @@ Welcome to DCDB's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
-.. automodule:: dcdb.dcdb
+.. contents::
+   :local:
 
 
 Define a table/model
 ====================
 
 .. code-block:: python
+
    @dataclass
    class Foo:
       a_number: int
@@ -29,6 +30,30 @@ Define a table/model
 Creates the sqlite table Foo with columns `a_number` and `text`.
 
 
+Create and retrieve a record
+============================
+
+.. code-block:: python
+
+   @dataclass
+   class Foo:
+      a_number: int
+      text: str
+
+   connection = dcdb.DBConnection("file_path/mydb.sqlite3")
+   connection.bind(Foo)
+
+   record = connection.tables.Foo(a_number=123, text="Hello world")
+   # record is automatically saved to database on creation
+   same_record = connect.tables.Foo.Select("a_number=?", 123)
+   assert same_record.id == record.id # True
+   assert same_record.text == "Hello World" # True
+
+
+DCDB module
+===========
+
+.. automodule:: dcdb.dcdb
 
 
 Indices and tables
