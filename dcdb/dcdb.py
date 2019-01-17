@@ -1536,32 +1536,6 @@ class TablesRegistry:
         self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._meta_.fields)
         return db_cls
 
-    # def generate_slotted_dcdb(self, db_cls: DBCommonTable):
-    #
-    #     """"
-    #         TODO,  currently the slotted DCDB classes have
-    #         <type descriptor> for ALL properties which makes it effectively useless.
-    #         Debatable if this is worth it or not.
-    #     """
-    #
-    #     # sourced from https://github.com/ericvsmith/dataclasses/blob/master/dataclass_tools.py
-    #
-    #     cls_dict = dict(db_cls.__dict__)
-    #     field_names = [f.name for f in dcs.fields(db_cls)]
-    #     field_names += ['_conn_', '_table_', '_original_', '_fields_']
-    #     field_names += ["id", "_dirty_record", "_dirty_record_ignore"]
-    #
-    #     cls_dict['__slots__'] = field_names
-    #     for field_name in field_names:
-    #         cls_dict.pop(field_name, None)
-    #
-    #     cls_dict.pop('_dict__', None)
-    #     qualname = getattr(db_cls, '__qualname__', None)
-    #     new_cls = type(db_cls)(db_cls.__name__, db_cls.__bases__, cls_dict)
-    #     if qualname is not None:
-    #         new_cls.__qualname__ = qualname
-    #
-    #     return new_cls
 
     def ioc_assignments(self, db_cls: DBCommonTable, source_cls, name, db_cls_fields) -> DBCommonTable:
 
