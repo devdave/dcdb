@@ -66,11 +66,11 @@
 
     Goals
     -----
-        1. `dcdb` is meant to be a dirt-simple way of saving data to a sqlite table.   Some features, like Joins, are planned
-        but that is going to take a while.
+        1. `dcdb` is meant to be a dirt-simple way of saving data to a sqlite table.   Some features, like Joins, are
+         planned but that is going to take a while.
 
-        2. `dcdb` makes no effort to prevent a user from shooting themselves in the foot.  If you grab two copies of the same
-        record, as pointed out above, you can lose data if you lose track of them.
+        2. `dcdb` makes no effort to prevent a user from shooting themselves in the foot.  If you grab two copies of the
+         same record, as pointed out above, you can lose data if you lose track of them.
 
         3. No dsl's.   if you have to do `AND(MyColumn==1234, OtherColumn=="abc"))` or something crazier like
         `(NOT(Foo, ILIKE(Bar, "w%"))` that is insane.  I have known SQL since the 90's and last thing I want is to learn
@@ -80,7 +80,7 @@
                 both have some interesting quirks that make them not friends.
 
 
-    TODO
+    In progress
     -----
 
     1. Cleanup the structure of the package
@@ -116,11 +116,9 @@ import sqlite3
 import contextlib
 import pickle
 import json
-import abc  # TODO is this needed?
 import collections
 from collections import namedtuple
 import enum
-import inspect
 import logging
 import weakref
 import datetime as dt
@@ -140,12 +138,12 @@ class AbstractTransformedClass(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def From(cls, value: str, value_type: typing.Union[object, type])->object:
+    def From(cls, value: str, value_type: typing.Union[object, type]) -> object:
         pass
 
     @classmethod
     @abc.abstractmethod
-    def To(cls, value: typing.Any, value_type: typing.Union[type, typing.Any])->str:
+    def To(cls, value: typing.Any, value_type: typing.Union[type, typing.Any]) -> str:
         pass
 
 
@@ -174,21 +172,16 @@ class Transformers:
     _transforms = {}
 
     @classmethod
-    def Set(cls, transform_type
-            , to_func:typing.Callable[typing.Any, typing.Union[type,object]]
-            , from_func:typing.Callable[typing.Any, typing.Union[type,object]]) -> None:
-        """
-        :param transform_type class or builtin type:
-        :param to_func callable(value, transform_type):
-        :param from_func callable(value, transform_type):
-        """
+    def Set(cls, transform_type: typing.Union[type, object]
+            , to_func: typing.Callable[typing.Any, typing.Union[type, object]]
+            , from_func: typing.Callable[typing.Any, typing.Union[type, object]]) -> None:
         cls._transforms[transform_type] = ConverterPair(to_func, from_func)
 
     @classmethod
     def Has(cls, transform_type: type) -> bool:
         return transform_type in cls._transforms
 
-    #TODO deprecate transformers or rework, not happy having to pass tranform_type everywhere
+    # TODO deprecate transformers or rework, not happy having to pass tranform_type everywhere
     @classmethod
     def To(cls, value, transform_type: type) -> str:
         return cls._transforms[transform_type].To(value, transform_type)
@@ -200,10 +193,10 @@ class Transformers:
 
 
 _datetime_format = "%Y-%m-%d %H:%M:%S.%f"
-_date_format ="%Y-%m-%d"
+_date_format = "%Y-%m-%d"
 Transformers.Set(dt.datetime
                  , lambda v, t: v if isinstance(v, str) else v.strftime(_datetime_format)
-                 , lambda v,t: dt.datetime.strptime(v, _datetime_format))
+                 , lambda v, t: dt.datetime.strptime(v, _datetime_format))
 Transformers.Set(dt.date
                  , lambda v, t: v if isinstance(v, str) else v.strftime(_date_format)
                  , lambda v, t: dt.datetime.strptime(v, _date_format).date())
@@ -222,6 +215,7 @@ class TransformDatetimeType:
 
     def To(self, value: typing.Any, transform_type: typing.Union[type, object]):
         return value if isinstance(value, str) else value.strftime(self.format)
+
 
 def cast_from_database(value: object, value_type: type):
     """
@@ -258,7 +252,7 @@ def cast_from_database(value: object, value_type: type):
     return retval
 
 
-def cast_to_database(value:typing.Any, value_type: typing.Union[type,object]) -> str:
+def cast_to_database(value: typing.Any, value_type: typing.Union[type, object]) -> str:
     """
     Converts the basic types to something compatible with the database
 
@@ -337,8 +331,8 @@ class FieldPickled(AbstractTransformedClass):
     def To(cls, value: dict, value_type):
         return pickle.dumps(value)
 
-class FieldJSON(AbstractTransformedClass):
 
+class FieldJSON(AbstractTransformedClass):
     SUBTYPE = "TEXT"
 
     @classmethod
@@ -349,9 +343,11 @@ class FieldJSON(AbstractTransformedClass):
     def To(cls, value, value_type):
         return json.dumps(value)
 
+
 class Fields:
     pickled = FieldPickled
     JSON = FieldJSON
+
 
 class SQLOperators(enum.Enum):
     AND = "AND"
@@ -360,14 +356,15 @@ class SQLOperators(enum.Enum):
     LIKE = "LIKE"
 
 
-
 class ListSelect(collections.abc.Sequence):
 
-    def __init__(self, child_name, relationship_field=None, parent_join_field="id", where=None, add_set=None, remove_set=None):
+    def __init__(self, child_name, relationship_field=None, parent_join_field="id", where=None, add_set=None,
+                 remove_set=None):
 
         if relationship_field is None:
             if "." not in child_name:
-                raise ValueError(f"Provided {child_name} but missing {relationship_field}.  Is a '.' missing from {child_name}?")
+                raise ValueError(
+                    f"Provided {child_name} but missing {relationship_field}.  Is a '.' missing from {child_name}?")
             else:
                 child_name, relationship_field = child_name.split(".")
 
@@ -378,13 +375,11 @@ class ListSelect(collections.abc.Sequence):
 
         self.child_name = child_name
         self.relationship_field = relationship_field
-        self.child = None # type: DBCommonTable
+        self.child = None  # type: DBCommonTable
 
         self.parent_name = None
         self.parent_join_field = parent_join_field
         self.parent = None
-
-
 
     @property
     def _where(self):
@@ -400,26 +395,26 @@ class ListSelect(collections.abc.Sequence):
             self.parent = instance
             self.tables = instance.tables
 
-
         return self
 
     @property
     def child_cls(self):
         return self.tables[self.child_name]
 
-    def _select(self, offset, limit=None)->DBCursorProxy:
+    def _select(self, offset, limit=None) -> DBCursorProxy:
 
-        return self.child_cls.Select(self._where, self.parent[self.parent_join_field], limit_offset=offset, limit_count=limit)
+        return self.child_cls.Select(self._where, self.parent[self.parent_join_field], limit_offset=offset,
+                                     limit_count=limit)
 
-    def __getitem__(self, index:int):
+    def __getitem__(self, index: int):
 
         return self._select(index, limit=1).fetchone()
 
-    def __setitem__(self, _:int, record:DBCommonTable):
+    def __setitem__(self, _: int, record: DBCommonTable):
         raise TypeError("Assigning records to a specific index is not supported with ListSelect")
 
     def __iadd__(self, other):
-        #TODO really need Transactions
+        # TODO really need Transactions
         for record in other:
             record[self.relationship_field] = self.parent[self.parent_join_field]
             if self._add_set:
@@ -428,7 +423,7 @@ class ListSelect(collections.abc.Sequence):
 
         return self
 
-    def __delitem__(self, key:int):
+    def __delitem__(self, key: int):
         record = self._select(key, limit=1).fetchone()
         record.delete()
 
@@ -457,7 +452,7 @@ class ListSelect(collections.abc.Sequence):
     def __len__(self):
         return self.child_cls.Count(self._where, self.parent[self.parent_join_field])
 
-    def insert(self, record:DBCommonTable):
+    def insert(self, record: DBCommonTable):
         record[self.relationship_field] = self.parent[self.parent_join_field]
         record.save()
 
@@ -465,7 +460,7 @@ class ListSelect(collections.abc.Sequence):
         kwargs[self.relationship_field] = self.parent[self.parent_join_field]
         return self.child_cls(**kwargs)
 
-    def first(self)->DBCommonTable:
+    def first(self) -> DBCommonTable:
         """
         Shortcut helper to fetch the first related record
 
@@ -475,11 +470,9 @@ class ListSelect(collections.abc.Sequence):
         return self._select(0).fetchone()
 
 
-
 class DictSelect(collections.abc.MutableMapping):
 
-
-    def __init__(self, child_name, name_field = None, relationship_field=None, parent_join_field="id"):
+    def __init__(self, child_name, name_field=None, relationship_field=None, parent_join_field="id"):
 
         if relationship_field is None:
             if "." not in child_name:
@@ -500,7 +493,7 @@ class DictSelect(collections.abc.MutableMapping):
         self.parent_join_field = parent_join_field
         self.parent = None
 
-    def __get__(self, instance:DBCommonTable, owner:type):
+    def __get__(self, instance: DBCommonTable, owner: type):
         if instance is None:
             return self
 
@@ -511,11 +504,11 @@ class DictSelect(collections.abc.MutableMapping):
 
         return self
 
-    def  __getitem__(self, key):
+    def __getitem__(self, key):
         return self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"
                                  f" AND {self.name_field}=?", key).fetchone()
 
-    def __setitem__(self, key, record:DBCommonTable):
+    def __setitem__(self, key, record: DBCommonTable):
         record[self.relationship_field] = self.parent[self.parent_join_field]
         record.save()
 
@@ -551,7 +544,7 @@ class AutoSelect:
 
         super().__init__()
 
-    def __get__(self, owner: DBCommonTable, objtype: DBCommonTable=None):
+    def __get__(self, owner: DBCommonTable, objtype: DBCommonTable = None):
         """
 
         :type owner:
@@ -581,10 +574,12 @@ class AutoSelect:
     def __delete__(self, obj):
         setattr(obj, self.__source_column, None)
 
+
 class RelationshipFields:
     dict = DictSelect
     unordered_list = ListSelect
     one_to_one = AutoSelect
+
 
 # class ProxyList(list):
 #
@@ -822,7 +817,6 @@ class RelationshipFields:
 
 @dcs.dataclass
 class ColumnDef:
-
     database: str
     python: object = None
 
@@ -855,7 +849,7 @@ class DBConnection:
                  "_conn_",
                  "_tables", "tables", "t", "registry",
                  "_dirty_records", "_dirty_records_track_changes",
-                 #I find this so bizarre in a way but it makes a sense, of sorts, that I need to add this
+                 # I find this so bizarre in a way but it makes a sense, of sorts, that I need to add this
                  "__weakref__"
                  )
 
@@ -892,7 +886,6 @@ class DBConnection:
             self._conn_.execute(f"DROP TABLE {record['name']}")
 
         self._conn_.execute("VACUUM")
-
 
     def close(self):
         if self.closed is not True:
@@ -943,7 +936,7 @@ class DBConnection:
     def bind(self, *tables, create_table: bool = True):
         collect = []
         for table in tables:
-            #TODO, this makes binding fragile, what if dataclasses internals change?
+            # TODO, this makes binding fragile, what if dataclasses internals change?
             # reference  https://github.com/python/cpython/blob/3.7/Lib/dataclasses.py#L187
             if hasattr(table, "__dataclass_fields__") is False:
                 raise TypeError(f"Expected {table} to be a dataclass, missing __dataclass_fields__ attribute")
@@ -960,7 +953,7 @@ class DBConnection:
         else:
             return collect
 
-    def bind_scan(self, scope, ignore: list = None, create_table = True) -> None:
+    def bind_scan(self, scope, ignore: list = None, create_table=True) -> None:
         """
             Convenience helper to bind every dataclass in the provided scope object to
             the current connection.
@@ -991,10 +984,8 @@ class DBConnection:
     def handle(self):
         return self._conn_
 
-
     def direct(self, sql, *args):
         return self._conn_.cursor().execute(sql, *args) if args else self._conn_.cursor().execute(sql)
-
 
     # @property
     # def tables(self):
@@ -1010,7 +1001,7 @@ class DBConnection:
 
 
 class DBRegisteredTable:
-    #TODO kill this off and or consolidate somehow
+    # TODO kill this off and or consolidate somehow
     __slots__ = ('connection', 'bound_cls', 'table_name', 'fields', "__weakref__")
 
     def __init__(self, connection, bound_cls, table_name, fields):
@@ -1023,13 +1014,12 @@ class DBRegisteredTable:
         return getattr(self.bound_cls, item)
 
     def __call__(self, *args, **kwargs):
-        #TODO, profile this to see how the unit tests are using it.
+        # TODO, profile this to see how the unit tests are using it.
         if "id" not in kwargs:
             return self.bound_cls.Create(*args, **kwargs)
         else:
             raise ValueError("Do not assign record ID through DBRegisteredTable")
             return self.bound_cls(*args, **kwargs)
-
 
     def Insert_many(self, *column_sets):
         collection = []
@@ -1043,14 +1033,10 @@ class DBRegisteredTable:
 
         return collection
 
-
-
     def Count(self, where=None, *args, **kwargs):
         kwargs['params'] = "COUNT(*)"
         cursor = self._DRV.Select(self.connection, self.table_name, where, *args, columns="COUNT(*)")
         return cursor.fetchone()[0]
-
-
 
     def Update(self, where, **values):
         return DBSQLOperations.Update(self.connection, self.table_name, self.fields, where, **values)
@@ -1080,8 +1066,6 @@ class DBSQLOperations:
             if field.type is TableDef: continue
             column_map[field.name] = cls._Create_column(field, type_map)
 
-
-
         body_elements = ["id INTEGER PRIMARY KEY NOT NULL"]
         body_elements += [f"{k} {v}" for k, v in column_map.items()]
 
@@ -1090,8 +1074,8 @@ class DBSQLOperations:
         if table_definitions:
             body_elements += [str(td) for td in table_definitions.values()]
 
-        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {table_name} ({", ".join(body_elements)})"""
-
+        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {table_name} ({", ".join(
+            body_elements)})"""
 
         try:
             return connection.execute(sql)
@@ -1109,10 +1093,8 @@ class DBSQLOperations:
 
         def find_default(column_field):
             return column_field.default_factory() \
-                    if column_field.default_factory is not dcs.MISSING \
-                    else column_field.default
-
-
+                if column_field.default_factory is not dcs.MISSING \
+                else column_field.default
 
         if isinstance(column_field.default, ColumnDef):
             return column_field.default.database
@@ -1133,8 +1115,6 @@ class DBSQLOperations:
                 sql_column = "TEXT"
         else:
             sql_column = type_map[column_field.type] if column_field.type in type_map else "TEXT"
-
-
 
         default_value = find_default(column_field)
 
@@ -1181,7 +1161,7 @@ class DBSQLOperations:
 
         append = ""
 
-        #Might seem odd but this catches two conditions in one
+        # Might seem odd but this catches two conditions in one
         # 1. is the key in params and 2. is params[key] Truthy versus False or None
         if params.get("limit_offset", False):
             if params.get("limit_count", False):
@@ -1190,8 +1170,6 @@ class DBSQLOperations:
                 append += f" LIMIT -1 OFFSET {params['limit_offset']} "
         elif params.get("limit_count", False):
             append += f" LIMIT {params['limit_count']}"
-
-
 
         sql = f"""
             SELECT
@@ -1214,7 +1192,7 @@ class DBSQLOperations:
         field_values = {}
         params = {k[1:]: v for k, v in values.items() if k[0] == "_"}
 
-        for k, v in {k:v for k, v in values.items() if k.startswith("_") is False}.items():
+        for k, v in {k: v for k, v in values.items() if k.startswith("_") is False}.items():
             field_values[k] = cast_to_database(v, dc_fields[k].type, )
 
         if isinstance(where, list):
@@ -1258,7 +1236,7 @@ class DBSQLOperations:
             return connection.execute(sql)
 
     @classmethod
-    def CreateIndex(cls, connection, table_name, index_fields, index_name = None, is_unique=True):
+    def CreateIndex(cls, connection, table_name, index_fields, index_name=None, is_unique=True):
         SQL = ['CREATE']
         if is_unique is True:
             SQL.append('UNIQUE')
@@ -1272,7 +1250,6 @@ class DBSQLOperations:
         SQL.append(f"({','.join(index_fields)})")
         SQL = " ".join(SQL)
         return connection.execute(SQL)
-
 
 
 class DBDirtyRecordMixin:
@@ -1316,13 +1293,11 @@ class DBDirtyRecordMixin:
 class DBMeta:
     __slots__ = ("connection", "name", "fields", "indexes")
 
-
     def __init__(self, connection, name, fields, indexes):
         self.connection = connection
         self.name = name
         self.fields = fields
         self.indexes = indexes
-
 
 
 @dcs.dataclass
@@ -1398,7 +1373,8 @@ class DBCommonTable(DBDirtyRecordMixin):
         retval = None
 
         if rec_id is not None:
-            retval = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
+            retval = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}",
+                                      **values)
         else:
             retval = self._DRV.Insert(self._meta_.connection, self._meta_.name, self._meta_.fields, **values)
             self.id = retval.lastrowid
@@ -1408,7 +1384,8 @@ class DBCommonTable(DBDirtyRecordMixin):
     def update(self):
         values = dcs.asdict(self)
         rec_id = values.pop("id")
-        cursor = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}", **values)
+        cursor = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}",
+                                  **values)
         self._dirty_reset()
         return cursor.rowcount == 1
 
@@ -1441,7 +1418,6 @@ class DBCursorProxy:
                 if not rows:
                     return
 
-
     def fetchall(self) -> DBCommonTable:
         for row in self._cursor.fetchall():
             yield self._factory(**row) if row is not None else None
@@ -1467,8 +1443,6 @@ class TablesRegistry:
 
     """
 
-
-
     def __init__(self, connection):
         self._registry: {str: DBCommonTable} = dict()
         self._connection = connection
@@ -1478,8 +1452,6 @@ class TablesRegistry:
             del self._registry[name]
 
         self._registry = {}
-
-
 
     def mk_bound_dataclass(self, source_cls, name: str) -> DBCommonTable:
         """
@@ -1491,7 +1463,6 @@ class TablesRegistry:
 
         def eval_type(st):
             return st if not isinstance(st, str) else eval(st, vars(sys.modules[source_cls.__module__]))
-
 
         # TODO put this in a higher scope or use a common heritage sentinel class
         exclusion_list = [TableDef]
@@ -1512,12 +1483,10 @@ class TablesRegistry:
         db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields)
 
         self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._meta_.fields)
-        setattr(self, name, self._registry[name]) #test to cut down on __getattr__ calls
+        setattr(self, name, self._registry[name])  # test to cut down on __getattr__ calls
         return db_cls
 
-
     def ioc_assignments(self, db_cls: DBCommonTable, source_cls, name, db_cls_fields) -> DBCommonTable:
-
 
         def set_default(name, value):
             if getattr(db_cls, name, None) is None:
@@ -1528,7 +1497,6 @@ class TablesRegistry:
         set_default("tables", self)
         set_default("_original_", source_cls)
         set_default("_DRV", DBSQLOperations)
-
 
         return db_cls
 
@@ -1544,4 +1512,3 @@ class TablesRegistry:
     #
     # def __getitem__(self, key):
     #     return self.get_table(key)
-
