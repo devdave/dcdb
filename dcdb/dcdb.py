@@ -586,238 +586,238 @@ class RelationshipFields:
     unordered_list = ListSelect
     one_to_one = AutoSelect
 
-class ProxyList(list):
-
-    def _set_owner(self, auto_list: AutoList, owner: DBCommonTable) -> None:
-        self.auto_list = auto_list
-        self.owner = owner
-
-    def __call__(self, *args, **kwargs) -> DBCommonTable:
-        LOG.debug(f"{args!r} {kwargs!r}")
-        return self.auto_list.create(self.owner, *args, **kwargs)
-
-    def first(self) ->DBCommonTable:
-        if len(self) >= 1:
-            return self[0]
-
-    def add(self, *records: DBCommonTable) -> DBCommonTable:
-        LOG.debug(records, self.owner, self.auto_list)
-        return self.auto_list.add(self.owner, *records)
-
-    def remove(self, record: DBCommonTable) -> DBCommonTable:
-        LOG.debug(record, self.owner, self.auto_list)
-        return self.auto_list.remove(self.owner, record)
-
-    def reset(self):
-        self.auto_list.reset()
-
-
-class AutoOperator:
-    __slots__ = ("op_str",)
-
-    def __init__(self, op_str):
-        self.op_str = op_str
-
-    def __call__(self, *args, **kwargs):
-        return self.op_str
-
-class AutoTerm:
-    __slots__ = ("term", "is_multi")
-
-    def __init__(self, term, is_multi=False):
-        self.term = term
-        self.is_multi = is_multi
-
-    def __call__(self, parent, child):
-        if self.is_multi:
-            return self.term[0].format(*self.term[1:], parent=parent, child=child)
-        else:
-            return self.term.format(parent=parent, child=child)
-
-
-TableSpec = collections.namedtuple("TableSpec", "name, column")
-
-
-class AutoList:
-    """
-
-    """
-    __slots__ = (
-        "__parent_table",
-        "__child_table",
-        "__owner",
-        "__conditions",
-        "__orderby",
-        "__rfetch",
-        "__rcreate",
-        "__radd",
-        "__rremove",
-        "__cache",
-        "__weakref__"
-    )
-
-
-
-
-
-    def __init__(self, parent, child, owner=None, conditions=None, orderby=None, creator=None, adder=None,
-                 remover=None, __cache=None):
-
-        raise DeprecationWarning("Should no longer be used")
-
-        if isinstance(parent, list):
-            self.__parent_table = TableSpec(parent[0], parent[1])
-        elif isinstance(parent, str):
-            self.__parent_table = TableSpec(*parent.split("."))
-        elif isinstance(parent, TableSpec):
-            self.__parent_table = parent
-
-        if isinstance(child, list):
-            self.__child_table = TableSpec(child[0], child[1])
-        elif isinstance(child , str):
-            self.__child_table = TableSpec(*child.split("."))
-        elif isinstance(child, TableSpec):
-            self.__child_table = child
-
-        self.__owner = owner
-        self.__conditions = conditions if conditions is not None \
-            else [AutoTerm(f"{self.__child_table.column}={{parent.{self.__parent_table.column}}}")]
-        self.__orderby = orderby
-        self.__rcreate = creator
-        self.__radd = adder
-        self.__rremove = remover
-        self.__cache = __cache
-
-    def where(self, *joins):
-
-        str_operators = {"AND", "OR"}  # TODO add more
-
-
-        new_conditions = []
-        for term in joins:
-
-            if isinstance(term, str):
-                if term.upper() in str_operators:
-                    new_conditions.append(AutoOperator(term))
-                else:
-                    new_conditions.append(AutoTerm(term))
-            else:
-                assert isinstance(term, list), "Where conditions must be str, [format str ,str], or [format str, *objects]"
-                new_conditions.append(AutoTerm(term, is_multi=True))
-
-        # expr OP expr OP
-        computed = []
-        for position, element in enumerate(new_conditions):
-            if position % 2 != 0:
-                if isinstance(element, AutoOperator) is False:
-                    computed.append(AutoOperator("AND"))
-                    computed.append(element)
-                else:
-                    computed.append(element)
-            else:
-                computed.append(element)
-
-        self.__conditions = computed
-
-        return type(self)(
-            self.__parent_table,
-            self.__child_table,
-            self.__owner,
-            self.__conditions,
-            self.__orderby,
-            self.__rcreate,
-            self.__radd,
-            self.__rremove,
-            self.__cache
-        )
-
-    def orderby(self, order_str):
-        self.__orderby = order_str
-
-    def creator(self, func):
-        return type(self)(
-            self.__parent_table,
-            self.__child_table,
-            self.__owner,
-            self.__conditions,
-            self.__orderby,
-            func,
-            self.__radd,
-            self.__rremove,
-            self.__cache
-        )
-
-    def create(self, parent_table, *args, **kwargs) -> DBCommonTable:
-        self.__cache = None
-        child_table = self.__owner.t[self.__child_table.table]
-        if self.__rcreate is not None:
-            return self.__rcreate(self.__owner, child_table, **kwargs)
-        else:
-            kwargs[self.__child_table.column].setdefault(self.__owner[self.__parent_table.column])
-            return child_table.Insert(**kwargs)
-
-    def adder(self, func):
-        return type(self)(
-            self.__parent_table,
-            self.__child_table,
-            self.__owner,
-            self.__conditions,
-            self.__orderby,
-            self.__rcreate,
-            func,
-            self.__rremove,
-            self.__cache
-        )
-
-    def add(self, parent_table, *tables: [DBCommonTable]) -> DBCommonTable:
-        self.__cache = None
-        if self.__radd is not None:
-            [self.__radd(self.__owner, parent_table, table) for table in tables]
-        else:
-            for table in tables:
-                table[self.__child_table.column] = parent_table[self.__parent_table.column]
-                table.update()
-
-    def remover(self, func):
-        return type(self)(
-            self.__parent_table,
-            self.__child_table,
-            self.__owner,
-            self.__conditions,
-            self.__orderby,
-            self.__rcreate,
-            self.__radd,
-            func,
-            self.__cache
-        )
-
-    def remove(self, parent_table, *records) -> DBCommonTable:
-        self.__cache = None
-        if self.__rremove is not None:
-            [self.__rremove(self.__owner, parent_table, record) for record in records]
-        else:
-            for record in records:
-                record[self.__child_table.column] = None
-                record.update()
-
-    def __get__(self, obj, objtype=None):
-
-        if obj is None:
-            return self
-        else:
-            self.__owner == obj
-
-        if self.__cache is None:
-            child_table = obj.tables[self.__child_table.name]
-            where = " ".join([term(obj, child_table.bound_cls) for term in self.__conditions])
-            records = ProxyList(child_table.Select(where).fetchall())
-            records._set_owner(self, obj)
-            self.__cache = records
-
-        return self.__cache
-
-    def reset(self):
-        self.__cache = None
+# class ProxyList(list):
+#
+#     def _set_owner(self, auto_list: AutoList, owner: DBCommonTable) -> None:
+#         self.auto_list = auto_list
+#         self.owner = owner
+#
+#     def __call__(self, *args, **kwargs) -> DBCommonTable:
+#         LOG.debug(f"{args!r} {kwargs!r}")
+#         return self.auto_list.create(self.owner, *args, **kwargs)
+#
+#     def first(self) ->DBCommonTable:
+#         if len(self) >= 1:
+#             return self[0]
+#
+#     def add(self, *records: DBCommonTable) -> DBCommonTable:
+#         LOG.debug(records, self.owner, self.auto_list)
+#         return self.auto_list.add(self.owner, *records)
+#
+#     def remove(self, record: DBCommonTable) -> DBCommonTable:
+#         LOG.debug(record, self.owner, self.auto_list)
+#         return self.auto_list.remove(self.owner, record)
+#
+#     def reset(self):
+#         self.auto_list.reset()
+#
+#
+# class AutoOperator:
+#     __slots__ = ("op_str",)
+#
+#     def __init__(self, op_str):
+#         self.op_str = op_str
+#
+#     def __call__(self, *args, **kwargs):
+#         return self.op_str
+#
+# class AutoTerm:
+#     __slots__ = ("term", "is_multi")
+#
+#     def __init__(self, term, is_multi=False):
+#         self.term = term
+#         self.is_multi = is_multi
+#
+#     def __call__(self, parent, child):
+#         if self.is_multi:
+#             return self.term[0].format(*self.term[1:], parent=parent, child=child)
+#         else:
+#             return self.term.format(parent=parent, child=child)
+#
+#
+# TableSpec = collections.namedtuple("TableSpec", "name, column")
+#
+#
+# class AutoList:
+#     """
+#
+#     """
+#     __slots__ = (
+#         "__parent_table",
+#         "__child_table",
+#         "__owner",
+#         "__conditions",
+#         "__orderby",
+#         "__rfetch",
+#         "__rcreate",
+#         "__radd",
+#         "__rremove",
+#         "__cache",
+#         "__weakref__"
+#     )
+#
+#
+#
+#
+#
+#     def __init__(self, parent, child, owner=None, conditions=None, orderby=None, creator=None, adder=None,
+#                  remover=None, __cache=None):
+#
+#         raise DeprecationWarning("Should no longer be used")
+#
+#         if isinstance(parent, list):
+#             self.__parent_table = TableSpec(parent[0], parent[1])
+#         elif isinstance(parent, str):
+#             self.__parent_table = TableSpec(*parent.split("."))
+#         elif isinstance(parent, TableSpec):
+#             self.__parent_table = parent
+#
+#         if isinstance(child, list):
+#             self.__child_table = TableSpec(child[0], child[1])
+#         elif isinstance(child , str):
+#             self.__child_table = TableSpec(*child.split("."))
+#         elif isinstance(child, TableSpec):
+#             self.__child_table = child
+#
+#         self.__owner = owner
+#         self.__conditions = conditions if conditions is not None \
+#             else [AutoTerm(f"{self.__child_table.column}={{parent.{self.__parent_table.column}}}")]
+#         self.__orderby = orderby
+#         self.__rcreate = creator
+#         self.__radd = adder
+#         self.__rremove = remover
+#         self.__cache = __cache
+#
+#     def where(self, *joins):
+#
+#         str_operators = {"AND", "OR"}  # TODO add more
+#
+#
+#         new_conditions = []
+#         for term in joins:
+#
+#             if isinstance(term, str):
+#                 if term.upper() in str_operators:
+#                     new_conditions.append(AutoOperator(term))
+#                 else:
+#                     new_conditions.append(AutoTerm(term))
+#             else:
+#                 assert isinstance(term, list), "Where conditions must be str, [format str ,str], or [format str, *objects]"
+#                 new_conditions.append(AutoTerm(term, is_multi=True))
+#
+#         # expr OP expr OP
+#         computed = []
+#         for position, element in enumerate(new_conditions):
+#             if position % 2 != 0:
+#                 if isinstance(element, AutoOperator) is False:
+#                     computed.append(AutoOperator("AND"))
+#                     computed.append(element)
+#                 else:
+#                     computed.append(element)
+#             else:
+#                 computed.append(element)
+#
+#         self.__conditions = computed
+#
+#         return type(self)(
+#             self.__parent_table,
+#             self.__child_table,
+#             self.__owner,
+#             self.__conditions,
+#             self.__orderby,
+#             self.__rcreate,
+#             self.__radd,
+#             self.__rremove,
+#             self.__cache
+#         )
+#
+#     def orderby(self, order_str):
+#         self.__orderby = order_str
+#
+#     def creator(self, func):
+#         return type(self)(
+#             self.__parent_table,
+#             self.__child_table,
+#             self.__owner,
+#             self.__conditions,
+#             self.__orderby,
+#             func,
+#             self.__radd,
+#             self.__rremove,
+#             self.__cache
+#         )
+#
+#     def create(self, parent_table, *args, **kwargs) -> DBCommonTable:
+#         self.__cache = None
+#         child_table = self.__owner.t[self.__child_table.table]
+#         if self.__rcreate is not None:
+#             return self.__rcreate(self.__owner, child_table, **kwargs)
+#         else:
+#             kwargs[self.__child_table.column].setdefault(self.__owner[self.__parent_table.column])
+#             return child_table.Insert(**kwargs)
+#
+#     def adder(self, func):
+#         return type(self)(
+#             self.__parent_table,
+#             self.__child_table,
+#             self.__owner,
+#             self.__conditions,
+#             self.__orderby,
+#             self.__rcreate,
+#             func,
+#             self.__rremove,
+#             self.__cache
+#         )
+#
+#     def add(self, parent_table, *tables: [DBCommonTable]) -> DBCommonTable:
+#         self.__cache = None
+#         if self.__radd is not None:
+#             [self.__radd(self.__owner, parent_table, table) for table in tables]
+#         else:
+#             for table in tables:
+#                 table[self.__child_table.column] = parent_table[self.__parent_table.column]
+#                 table.update()
+#
+#     def remover(self, func):
+#         return type(self)(
+#             self.__parent_table,
+#             self.__child_table,
+#             self.__owner,
+#             self.__conditions,
+#             self.__orderby,
+#             self.__rcreate,
+#             self.__radd,
+#             func,
+#             self.__cache
+#         )
+#
+#     def remove(self, parent_table, *records) -> DBCommonTable:
+#         self.__cache = None
+#         if self.__rremove is not None:
+#             [self.__rremove(self.__owner, parent_table, record) for record in records]
+#         else:
+#             for record in records:
+#                 record[self.__child_table.column] = None
+#                 record.update()
+#
+#     def __get__(self, obj, objtype=None):
+#
+#         if obj is None:
+#             return self
+#         else:
+#             self.__owner == obj
+#
+#         if self.__cache is None:
+#             child_table = obj.tables[self.__child_table.name]
+#             where = " ".join([term(obj, child_table.bound_cls) for term in self.__conditions])
+#             records = ProxyList(child_table.Select(where).fetchall())
+#             records._set_owner(self, obj)
+#             self.__cache = records
+#
+#         return self.__cache
+#
+#     def reset(self):
+#         self.__cache = None
 
 
 @dcs.dataclass
