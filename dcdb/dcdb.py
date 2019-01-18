@@ -1174,8 +1174,17 @@ class DBSQLOperations:
     def Select(cls, connection, table_name, where=None, *where_vals, **params):
 
         append = ""
-        if "limit_offset" in params and "limit_count" not in params:
-            append += f" LIMIT -1 OFFSET {params['limit_offset']} "
+
+        #Might seem odd but this catches two conditions in one
+        # 1. is the key in params and 2. is params[key] Truthy versus False or None
+        if params.get("limit_offset", False):
+            if params.get("limit_count", False):
+                append += f" LIMIT {params['limit_count']} OFFSET {params['limit_offset']}"
+            else:
+                append += f" LIMIT -1 OFFSET {params['limit_offset']} "
+        elif params.get("limit_count", False):
+            append += f" LIMIT {params['limit_count']}"
+
 
 
         sql = f"""
