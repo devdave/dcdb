@@ -637,6 +637,18 @@ def test_RelationshipFields_DOT_unordered_list__works(connection:dcdb.DBConnecti
 
 
 
+def test_RelationshipFields_DOT_ListSelect___dotted_arguments():
+
+    expected = dcdb.ListSelect("Child", "parent_id")
+    dotted = dcdb.ListSelect("Child.parent_id")
+
+    assert expected.child_name == dotted.child_name
+    assert expected.relationship_field == dotted.relationship_field
+
+    with pytest.raises(ValueError):
+        broken = dcdb.ListSelect("Foo bar")
+
+
 
 def test_RelationshipFields_dot_dict__works(connection:dcdb.DBConnection):
 

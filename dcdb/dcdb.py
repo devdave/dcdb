@@ -363,7 +363,13 @@ class SQLOperators(enum.Enum):
 
 class ListSelect(collections.abc.Sequence):
 
-    def __init__(self, child_name, relationship_field, parent_join_field="id", where=None, add_set=None, remove_set=None):
+    def __init__(self, child_name, relationship_field=None, parent_join_field="id", where=None, add_set=None, remove_set=None):
+
+        if relationship_field is None:
+            if "." not in child_name:
+                raise ValueError(f"Provided {child_name} but missing {relationship_field}.  Is a '.' missing from {child_name}?")
+            else:
+                child_name, relationship_field = child_name.split(".")
 
         self.tables = None
         self.__where = where
