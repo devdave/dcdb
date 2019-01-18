@@ -584,6 +584,59 @@ def test_AutoSelect___works(connection):
     assert child_record.parent_id is None
 
 
+def test_RelationshipFields_DOT_unordered_list__works(connection:dcdb.DBConnection):
+    #whoops, realized this isn't tested inside dcdb but in harvester
+
+    @dataclass()
+    class Box:
+        pass
+        contents = dcdb.RelationshipFields.unordered_list("Widget", "box_id")
+
+    @dataclass()
+    class Widget:
+        name:str
+        quantity:int
+        box_id: int = None
+
+    connection.bind(Box, Widget)
+
+    box = connection.t.Box()
+    box.contents.create(name="Nails", quantity=300)
+    box.contents.create(name="Hammer", quantity=1)
+    box.contents.create(name="Measuring tape", quantity=1)
+    box.contents.create(name="Bandaids", quantity=0)
+
+    # NOTE relying heavily on order of inserts
+    assert box.contents[1].name == "Hammer"
+    assert len(box.contents) == 4
+    del box.contents[1]
+    assert len(box.contents) == 3
+    assert connection.t.Widget.Count() == 3
+    assert box.contents[1].name == "Measuring tape"
+
+    with pytest.raises(TypeError):
+        box.contents[5] = connection.t.Widget(name="Stuff", quantity=10**5)
+
+    assert len(box.contents) == 3
+    assert connection.t.Widget.Count() == 4
+
+
+    widget = box.contents.first()
+    assert widget.name == "Nails"
+
+    widget.delete()
+
+    assert len(box.contents) == 2
+    assert box.contents.first().name == "Measuring tape"
+    assert box.contents[1].name == "Bandaids"
+
+    bandaids = box.contents.pop(1)
+    assert bandaids.quantity == 0
+    assert len(box.contents) == 1
+    assert connection.t.Widget.Count() == 3
+
+
+
 
 def test_RelationshipFields_dot_dict__works(connection:dcdb.DBConnection):
 
@@ -632,6 +685,7 @@ def test_RelationshipFields_dot_dict__works(connection:dcdb.DBConnection):
     furniture_count = connection.direct("SELECT count(*) FROM Furniture").fetchone()[0]
     assert furniture_count == 2
     assert len(house.furniture) == 1
+
 
 
 

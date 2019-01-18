@@ -401,21 +401,16 @@ class ListSelect(collections.abc.Sequence):
     def child_cls(self):
         return self.tables[self.child_name]
 
-    def _select(self, index)->DBCursorProxy:
+    def _select(self, offset, limit=None)->DBCursorProxy:
 
-        return self.child_cls.Select(self._where, self.parent[self.parent_join_field], limit_offset=index)
+        return self.child_cls.Select(self._where, self.parent[self.parent_join_field], limit_offset=offset, limit_count=limit)
 
     def __getitem__(self, index:int):
-        #TODO use LIMIT condition with select for efficiency
-        records - self._select(index)
-        return records.fetchone()
+
+        return self._select(index, limit=1).fetchone()
 
     def __setitem__(self, _:int, record:DBCommonTable):
-        # Ignore requested ordering for an OrderedRelationship field
-        record[self.relationship_field] = self.parent[self.parent_join_field]
-        if self._add_set:
-            record[self._add_set[0]] = self._add_set[1]
-        record.save()
+        raise TypeError("Assigning records to a specific index is not supported with ListSelect")
 
     def __iadd__(self, other):
         #TODO really need Transactions
@@ -428,11 +423,8 @@ class ListSelect(collections.abc.Sequence):
         return self
 
     def __delitem__(self, key:int):
-        records = self._select(key)
-        records[key][self.relationship_field] = None
-        if self._remove_set:
-            records[key][sef._remove_set[0]] = self._remove_set[1]
-        records[key].save()
+        record = self._select(key, limit=1).fetchone()
+        record.delete()
 
     def pop(self, index):
 
@@ -444,7 +436,8 @@ class ListSelect(collections.abc.Sequence):
         record[self.relationship_field] = None
         if self._remove_set:
             record[self._remove_set[0]] = self._remove_set[1]
-            record.save()
+
+        record.save()
         return record
 
     def remove(self, record):
