@@ -472,7 +472,7 @@ class ListSelect(collections.abc.Sequence):
 
 class DictSelect(collections.abc.MutableMapping):
 
-    def __init__(self, child_name, name_field=None, relationship_field=None, parent_join_field="id"):
+    def __init__(self, child_name, name_field=None, relationship_field=None, parent_join_field="id", by_order=None):
 
         if relationship_field is None:
             if "." not in child_name:
@@ -488,6 +488,7 @@ class DictSelect(collections.abc.MutableMapping):
         self.name_field = name_field
         self.relationship_field = relationship_field
         self.child_cls = None
+        self.by_order = by_order
 
         self.parent_name = None
         self.parent_join_field = parent_join_field
@@ -506,7 +507,8 @@ class DictSelect(collections.abc.MutableMapping):
 
     def __getitem__(self, key):
         return self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"
-                                 f" AND {self.name_field}=?", key).fetchone()
+                                 f" AND {self.name_field}=?", key
+                                 , order_by=self.by_order).fetchone()
 
     def __setitem__(self, key, record: DBCommonTable):
         record[self.relationship_field] = self.parent[self.parent_join_field]

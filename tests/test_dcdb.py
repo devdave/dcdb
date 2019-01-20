@@ -649,6 +649,34 @@ def test_RelationshipFields_DOT_ListSelect___dotted_arguments():
         broken = dcdb.ListSelect("Foo bar")
 
 
+def test_ReltionshipFields_DOT_dict__by_order(connection: dcdb.DBConnection):
+
+    #TODO should refactor to have a stack based dictionary class because
+    # otherwise this behavior is a tad confusing.
+
+    @dataclass()
+    class Box:
+        widget = dcdb.RelationshipFields.dict("Thing.name", "parent_id", by_order="version")
+
+    @dataclass()
+    class Thing:
+        name: str
+        version: int
+        parent_id: int = None
+
+    connection.binds(Box, Thing)
+
+    b = connection.t.Box()
+
+    object1 = b.widget.create(name="Foo", version=1)
+    object2 = b.widget.create(name="Foo", version=3)
+    object3 = b.widget.create(name="Foo", version=2)
+
+    assert b.widget['Foo'].id == 2
+
+    object3 = b.widget.create(name="Foo", version=4)
+
+    assert b.widget['Foo'].id == 4
 
 def test_RelationshipFields_dot_dict__works(connection:dcdb.DBConnection):
 
