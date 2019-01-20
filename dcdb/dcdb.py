@@ -1159,17 +1159,25 @@ class DBSQLOperations:
     @classmethod
     def Select(cls, connection, table_name, where=None, *where_vals, **params):
 
-        append = ""
+        append = []
 
         # Might seem odd but this catches two conditions in one
         # 1. is the key in params and 2. is params[key] Truthy versus False or None
+
+        if params.get("order_by", False):
+            #TODO need some sort of mechanism to decide ASC or DESC order
+            append += [f"ORDER BY {params['order_by']} DESC"]
+
         if params.get("limit_offset", False):
             if params.get("limit_count", False):
-                append += f" LIMIT {params['limit_count']} OFFSET {params['limit_offset']}"
+                append += [f"LIMIT {params['limit_count']} OFFSET {params['limit_offset']}"]
             else:
-                append += f" LIMIT -1 OFFSET {params['limit_offset']} "
+                append += [f"LIMIT -1 OFFSET {params['limit_offset']}"]
         elif params.get("limit_count", False):
-            append += f" LIMIT {params['limit_count']}"
+            append += [f"LIMIT {params['limit_count']}"]
+
+
+        append = " ".join(append)
 
         sql = f"""
             SELECT
