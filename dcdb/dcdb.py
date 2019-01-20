@@ -1136,6 +1136,7 @@ class DBSQLOperations:
 
     @classmethod
     def Insert(cls, connection, table_name, dc_fields, **column_fields):
+    def Insert(cls, cursor, table_name, dc_fields, **column_fields):
 
         if column_fields:
             keys = list(column_fields.keys())
@@ -1152,14 +1153,14 @@ class DBSQLOperations:
             except KeyError as ex:
                 raise RuntimeError(f"Missing column/{ex} - perhaps a typo? Choices are {dc_fields.keys()}")
 
-            return connection.execute(sql, values)
 
         else:
             sql = f""" INSERT INTO {table_name} DEFAULT VALUES"""
             return connection.execute(sql)
+            return cursor.execute(sql)
 
     @classmethod
-    def Select(cls, connection, table_name, where=None, *where_vals, **params):
+    def Select(cls, cursor, table_name, where=None, *where_vals, **params):
 
         append = []
 
@@ -1192,9 +1193,9 @@ class DBSQLOperations:
 
         if where and where_vals:
             assert where_vals is not None, f"Where has ? but no arguments for {where}!"
-            return connection.execute(sql, where_vals)
+            return cursor.execute(sql, where_vals)
         else:
-            return connection.execute(sql)
+            return cursor.execute(sql)
 
     @classmethod
     def Update(cls, connection, table_name, dc_fields, where, **values: dict):
@@ -1356,7 +1357,8 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     @classmethod
     def Select(cls, where=None, *args, **kwargs):
-        cursor = cls._DRV.Select(cls.DB(), cls._meta_.name, where, *args, **kwargs)
+        cursor = cls.DB()
+        cls._DRV.Select(cursor, cls._meta_.name, where, *args, **kwargs)
         return DBCursorProxy(cls, cursor)
 
     @classmethod
@@ -1365,8 +1367,9 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     @classmethod
     def Create(cls, **kwargs):
-        cursor = cls._DRV.Insert(cls.DB(), cls._meta_.name, cls._meta_.fields, **kwargs)
-        cursor = cls._DRV.Select(cls.DB(), cls._meta_.name, f"id={cursor.lastrowid}")
+        cursor = cls.DB()
+        cls._DRV.Insert(cursor, cls._meta_.name, cls._meta_.fields, **kwargs)
+        cls._DRV.Select(cursor, cls._meta_.name, f"id={cursor.lastrowid}")
         return DBCursorProxy(cls, cursor).fetchone()
 
     def delete(self):
