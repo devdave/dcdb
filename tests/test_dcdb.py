@@ -757,6 +757,62 @@ def test_RelationshipFields_dict__dotted_argument(connection):
 
 
 
+def test_RelationshipFields_JoinTable__works(connection):
+
+    @dataclass()
+    class Box:
+        #One way from Box.things[str]
+        things: dcdb.RelationshipFields.JoinTable("Box2Thing.box_id", "Box2Thing.thing_id")
+
+    @dataclass()
+    class Box2Thing:
+        box_id: int
+        thing_id: int
+
+    @dataclass()
+    class Thing:
+        name:str
+        quantity: int
+        material: str
+        idx_NameMaterial:dcdb.TableDef = "CONSTRAINT NameMaterial UNIQUE(name, material)"
+
+
+    connection.binds(Box, Box2Thing, Thing)
+
+    toolbox = connection.t.Box()
+    storagebox = connection.t.Box()
+
+    hammers = connection.t.Thing(name="Hammer", quantity=2, material="steel")
+    nails = connection.t.Thing(name="Nails", quantity=150, material="iron")
+    screwdriver = connection.t.Thing(name="Screwdriver", quantity=2, material="aluminum")
+    bits = connection.t.Thing(name="Bits", quantity=12, material="carbon steel")
+    tape = connection.t.Thing(name="Tape", quantity=1, material="Plastic")
+
+    toolbox.things += [hammers, nails, screwdriver]
+    storagebox.things += [screwdriver, bits, tape]
+
+    assert hammers in toolbox.things
+    assert hammers not in storagebox.things
+
+    assert nails in toolbox.things
+    assert nails not in toolbox.things
+
+    assert bits not in toolbox
+    assert bits in storagebox.things
+
+    assert tape not in toolbox.things
+    assert tape in storagebox.things
+
+    assert connection.t.Thing.Count() == 5
+    assert len(toolbox.things) == 3
+    assert len(storagebox.things) == 3
+
+    assert toolbox.things['Nails'].quantity == 150
+    assert storagebox.things['Bits'].quantity == 12
+
+    toolbox.things['Screwdriver'].quantity = 1
+    assert storagebox.things['Screwdriver'].quantity == 1
+
 
 
 
