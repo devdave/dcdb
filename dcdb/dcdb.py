@@ -1135,7 +1135,6 @@ class DBSQLOperations:
         return sql_column
 
     @classmethod
-    def Insert(cls, connection, table_name, dc_fields, **column_fields):
     def Insert(cls, cursor, table_name, dc_fields, **column_fields):
 
         if column_fields:
@@ -1153,10 +1152,10 @@ class DBSQLOperations:
             except KeyError as ex:
                 raise RuntimeError(f"Missing column/{ex} - perhaps a typo? Choices are {dc_fields.keys()}")
 
+            return cursor.execute(sql, values)
 
         else:
             sql = f""" INSERT INTO {table_name} DEFAULT VALUES"""
-            return connection.execute(sql)
             return cursor.execute(sql)
 
     @classmethod
