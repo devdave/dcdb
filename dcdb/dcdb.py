@@ -535,23 +535,56 @@ class DictSelect(collections.abc.MutableMapping):
         return self.child.Count(f"{self.relationship_field}={self.parent[self.parent_join_field]}")
 
 
-class LeftNamedMultiJoin:
-    """
+@dcs.dataclass()
+class TableCriteria:
+    name: str
+    key: str
+    cls: DBRegisteredTable = None
 
-    left table
-        id
 
-    join_table
-        left_id
-        right_id
-
-    right_table
-
-    left.right[]
+class LeftNamedMultiJoin(collections.abc.MutableMapping):
 
     """
+        left table
+            id
 
-    def __init__(self, source_column: str, remote_table, join_str=""):
+        join_table
+            left_id
+            right_id
+
+        right_table
+
+        left.right[]
+    """
+
+    def __init__(self, join_table, join_left_rowid, join_right_rowid, child_table, parent_rowid="id", child_rowid="id"):
+        "Box2Thing", "box_id", "thing_id", "Thing"
+
+        self.join_table = join_table
+        self.join_left_rowid = join_left_rowid
+        self.join_right_rowid = join_right_rowid
+
+        self.child = TableCriteria(child_table, child_rowid)
+
+        self.parent = TableCriteria(None, parent_rowid)
+
+
+        """
+        Select * FROM {self.child.table} 
+        LEFT JOIN {self.join_table} jt ON jt.{self.join_right_rowid} = {self.child.table}.{self.child.key}
+        WHERE
+            jt.{left_rowid} = '{parent[parent_rowid]}'
+                        
+        """
+
+    def __get__(self, instance, owner):
+
+        if self.parent.cls is None:
+            self.parent.cls = instance
+            self.child.cls = self.parent.cls.tables[self.child.name]
+
+        #TODO, del __get__ ?
+        return self
 
 
 

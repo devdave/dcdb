@@ -757,12 +757,12 @@ def test_RelationshipFields_dict__dotted_argument(connection):
 
 
 
-def test_RelationshipFields_JoinTable__works(connection):
+def test_RelationshipFields_Named_Left_Join__works(connection):
 
     @dataclass()
     class Box:
         #One way from Box.things[str]
-        things: dcdb.RelationshipFields.named_left_join("Box2Thing.box_id", "Box2Thing.thing_id")
+        things: dcdb.RelationshipFields.named_left_join("Box2Thing.box_id", "Box2Thing.thing_id", "Thing")
 
     @dataclass()
     class Box2Thing:
