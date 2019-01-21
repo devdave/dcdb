@@ -535,6 +535,27 @@ class DictSelect(collections.abc.MutableMapping):
         return self.child.Count(f"{self.relationship_field}={self.parent[self.parent_join_field]}")
 
 
+class LeftNamedMultiJoin:
+    """
+
+    left table
+        id
+
+    join_table
+        left_id
+        right_id
+
+    right_table
+
+    left.right[]
+
+    """
+
+    def __init__(self, source_column: str, remote_table, join_str=""):
+
+
+
+
 class AutoSelect:
 
     def __init__(self, target_table: str, target_column: str, source_column: str):
@@ -581,6 +602,7 @@ class RelationshipFields:
     dict = DictSelect
     unordered_list = ListSelect
     one_to_one = AutoSelect
+    named_left_join = LeftNamedMultiJoin
 
 
 # class ProxyList(list):
