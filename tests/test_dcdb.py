@@ -762,7 +762,7 @@ def test_RelationshipFields_JoinTable__works(connection):
     @dataclass()
     class Box:
         #One way from Box.things[str]
-        things: dcdb.RelationshipFields.JoinTable("Box2Thing.box_id", "Box2Thing.thing_id")
+        things: dcdb.RelationshipFields.NamedJoinTable("Box2Thing.box_id", "Box2Thing.thing_id")
 
     @dataclass()
     class Box2Thing:
