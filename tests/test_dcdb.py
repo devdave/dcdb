@@ -222,6 +222,11 @@ def test_DBCommonTable__assure_post_init_overload_works(connection):
     @dataclass()
     class Foo:
         def __post_init__(self, *args, **kwargs):
+            """
+
+            :type args: [typing.Any]
+            :type kwargs: {str:typing.Any}
+            """
             super().__post_init__(*args, **kwargs)
             LOG.debug("I was called")
 

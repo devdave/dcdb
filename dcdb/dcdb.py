@@ -495,8 +495,6 @@ class DictSelect(collections.abc.MutableMapping):
         self.parent = None
 
     def __get__(self, instance: DBCommonTable, owner: type):
-        if instance is None:
-            return self
 
         if self.parent is None:
             self.parent = instance
@@ -1001,7 +999,7 @@ class DBConnection:
             bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
 
             if create_table:
-                bound_class._DRV.Create_table(self, bound_class, bound_class._meta_.name)
+                bound_class._driver.Create_table(self, bound_class)
 
             collect.append(bound_class)
 
@@ -1105,7 +1103,7 @@ class DBSQLOperations:
     """
 
     @classmethod
-    def Create_table(cls, connection, table_cls, table_name, safeguard_if_not_exists: bool = True):
+    def Create_table(cls, connection, proxy_table: RecordProxy, safeguard_if_not_exists: bool = True):
         """
             table_definitions - None column definitions like foreign keys and constraints
 
@@ -1115,24 +1113,24 @@ class DBSQLOperations:
         type_map = {int: "INTEGER", str: "TEXT", bool: "BOOLEAN"}
 
         table_def_match = lambda field_val: field_val.type is TableDef and isinstance(field_val.default, str)
-        table_definitions = {f.name: f.default for f in dcs.fields(table_cls) if table_def_match(f)}
-
-        for field in dcs.fields(table_cls):
-            if field.name == "id": continue  # this is ALWAYS part of the def so don't bother
-            if field.type is None: continue
-            if field.type is TableDef: continue
-            column_map[field.name] = cls._Create_column(field, type_map)
-
+        table_definitions = [f for f in proxy_table._class_fields.values() if table_def_match(f) is True]
+        field_definitions = [f for f in proxy_table._class_fields.values() if table_def_match(f) is False]
         body_elements = ["id INTEGER PRIMARY KEY NOT NULL"]
-        body_elements += [f"{k} {v}" for k, v in column_map.items()]
 
-        # sql.append(", ".join(), )
+        for field in field_definitions:
+            if field.name == "id": continue  # this is ALWAYS part of the def so don't bother
+            body_elements += [f"{field.name} {cls._Create_column(field, type_map)}"]
+
 
         if table_definitions:
+            body_elements += ["\n"]
             body_elements += [str(td) for td in table_definitions.values()]
 
-        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {table_name} ({", ".join(
-            body_elements)})"""
+        body_elements = ", ".join(body_elements)
+
+        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {proxy_table._table_name} (
+            {body_elements}
+        )"""
 
         try:
             return connection.execute(sql)
@@ -1364,17 +1362,183 @@ class DBMeta:
         self.fields = fields
         self.indexes = indexes
 
+@dcs.dataclass()
+class BaseRecord:
 
-@dcs.dataclass
-class DBCommonTable(DBDirtyRecordMixin):
+    id: int
+
+    def __post_init__(self):
+
+        LOG.debug("Finalization with __post_init__")
+
+        # Post processing to convert from DB to Application
+        for field in self._meta_.fields.values():
+            if field.name == "id": continue
+
+            # avoid mutation tracking as much as possible
+            orig_value = getattr(self, field.name)
+            value = cast_from_database(orig_value, field.type)
+            super().__setattr__(field.name, value)
+
+
+
+class RecordProxy:
+    """
+
+        Intended as a wrapper around the actual data curried from the database to the application
+
+        Responsibilities:
+            Handle change management
+            manage
+                retrieval
+                update or save
+                delete
+
+        Future:
+            Record replication
+                if record instances A and B both point to
+                    R1,  both references to R1 through A and B would be shared
+
+    """
+
+    __slots__ = (
+        "_table_name"
+        , "_data_cls"
+        , "_class_fields"
+        , "_driver"
+        , "_connection"
+        , "_source"
+        , "_changes"
+        , "_active"
+        , "t"
+        , "tables"
+    )
+
+    def __init__(self, table_name, data_cls: BaseRecord, class_fields: dict, driver: DBSQLOperations, connection: DBConnection, table_registry: TablesRegistry):
+
+
+        super().__setattr__("_class_fields", "class_fields")
+
+        self._table_name = table_name
+        self._data_cls = data_cls
+        self._class_fields = class_fields
+
+
+        self._driver = driver
+        self._connection = connection
+
+        #Record keeping
+        self._source = None
+        self._changes = {}
+        self._active = False
+
+        #utilities/meta info
+        self.tables = table_registry
+        self.t = table_registry
+
+
+    def __call__(self, **kwargs):
+
+        kwargs.setdefault("id", None)
+        self._source = self._data_cls(**kwargs)
+        self.changes = kwargs
+
+    def __getattr__(self, item):
+        if item not in self._class_fields:
+            return super().__getattr__(item)
+
+        return self._source[item] if item not in self._changes else self._changes[item]
+
+    def __getitem__(self, item):
+        if item not in self._class_fields:
+            return super().__getitem__(item)
+
+        return self._source[item] if item not in self._changes else self._changes[item]
+
+    def __setattr__(self, key, value):
+        if key not in self._class_fields:
+            return super().__setattr__(key, value)
+
+        setattr(self._changes, key, value)
+        self._changes[key] = value
+        return value
+
+    def __setitem__(self, key, value):
+        if key not in self._class_fields:
+            return super().__setattr__(key, value)
+
+        self._changes[key] = value
+        return value
+
+
+
+    def save(self, cursor = None):
+        if cursor is None:
+            cursor = self._connection.cursor()
+
+        rec_id = self.changes.get("id", None)
+
+        if rec_id is None:
+            record = self._driver.Insert(cursor, self._table_name, self._class_fields, self._source)
+            self._source = dcs.asdict(record)
+        else:
+            record = self._driver.Update(cursor, self._table_name, self._class_fields, f"id={rec_id}", **self._changes)
+
+
+
+        return record
+
+
+    def update(self, cursor = None):
+
+        cursor = cursor if cursor is not None else self._connection.cursor()
+
+        rec_id = self.changes.get("id", None)
+
+        if rec_id is None:
+            raise ValueError("Cannot update a record if record.id is None")
+
+        record = self._driver.Update(cursor, self._table_name, self._class_fields, f"id={rec_id}", **self._changes)
+
+        self._source = record
+
+        return record
+
+
+    def Count(self, cursor = None):
+
+        cursor = cursor if cursor is not None else self._connection.cursor()
+
+        return self._driver.Count(cursor. self._table_name)
+
+    def delete(self, cursor = None):
+
+        rec_id = self.changes.get("id", None) \
+            if self.changes.get("id", None) is not None \
+            else self._source.get('id', None)
+
+        if not rec_id:
+            raise ValueError(f"Cannot update a record if record.id is {rec_id!r}")
+
+        result = self._driver.Delete(cursor, self._table_name, f"id=?", rec_id)
+
+
+
+class DBCommonTable():
     """
     :cvar _conn_: DBConnection
     :cvar _table__: str
     :cvar _original_: object
     :cvar _fields_:[dcs.Field]
     """
+    __slots__ = (
+        "_record_cls"
+        , "_source_record"
+        , "_changed_record"
+    )
 
     id: int  # TODO should I make this an initvar?
+
 
     def __post_init__(self):
 
@@ -1507,7 +1671,6 @@ class TablesRegistry:
         a reconnect mechanism would be a good idea to save the class definitions for
         environments like flask where bind maybe called more than once.
 
-
     """
 
     def __init__(self, connection):
@@ -1520,7 +1683,7 @@ class TablesRegistry:
 
         self._registry = {}
 
-    def mk_bound_dataclass(self, source_cls, name: str) -> DBCommonTable:
+    def mk_bound_dataclass(self, source_cls, name: str) -> RecordProxy:
         """
 
         :param source_cls: a dataclass intended to be used for working with a databasee
@@ -1534,7 +1697,7 @@ class TablesRegistry:
         # TODO put this in a higher scope or use a common heritage sentinel class
         exclusion_list = [TableDef]
 
-        db_cls = dcs.make_dataclass(f"DCDB_{name}", [], bases=(source_cls, DBCommonTable))
+        db_cls = dcs.make_dataclass(f"DCDB_{name}", [], bases=(source_cls,BaseRecord))
         db_cls_fields = dcs.fields(db_cls)
 
         for field in db_cls_fields:
@@ -1543,15 +1706,16 @@ class TablesRegistry:
             except NameError as ex:
                 raise NameError(f"Bad column type {field.type!r} for {field.name!r} on {name!r} class table")
 
-        db_cls_fields = [f for f in db_cls_fields if f.type not in exclusion_list]
+        db_cls_fields = {f.name:f for f in db_cls_fields if f.type not in exclusion_list}
 
         # TODO - Figure out why __hash__ from DCCommonTable is being stripped out
         setattr(db_cls, "__hash__", lambda instance: hash(id(instance)))
-        db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields)
+        proxied_class = RecordProxy(name, db_cls, db_cls_fields, DBSQLOperations, self._connection, self)
 
-        self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._meta_.fields)
-        setattr(self, name, self._registry[name])  # test to cut down on __getattr__ calls
-        return db_cls
+        # db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields)
+        self._registry[name] = proxied_class
+        setattr(self, name, proxied_class)
+        return proxied_class
 
     def ioc_assignments(self, db_cls: DBCommonTable, source_cls, name, db_cls_fields) -> DBCommonTable:
 
@@ -1574,8 +1738,4 @@ class TablesRegistry:
 
     __getattr__ = get_table
     __getitem__ = get_table
-    # def __getattr__(self, key):
-    #     return self.get_table(key)
-    #
-    # def __getitem__(self, key):
-    #     return self.get_table(key)
+
