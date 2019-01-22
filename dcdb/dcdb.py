@@ -1070,7 +1070,7 @@ class DBRegisteredTable:
     def __getattr__(self, item):
         return getattr(self.bound_cls, item)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs)->DBCommonTable:
         # TODO, profile this to see how the unit tests are using it.
         if "id" not in kwargs:
             return self.bound_cls.Create(*args, **kwargs)
