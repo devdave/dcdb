@@ -1078,6 +1078,9 @@ class DBRegisteredTable:
             raise ValueError("Do not assign record ID through DBRegisteredTable")
             return self.bound_cls(*args, **kwargs)
 
+    def Assign(self, **kwargs) ->DBCommonTable:
+        return self.bound_cls(**kwargs)
+
     def Insert_many(self, *column_sets):
         collection = []
         for column_fields in column_sets:
