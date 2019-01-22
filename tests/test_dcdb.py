@@ -764,7 +764,7 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
         #One way from Box.things[str]
         def __post_init__(self):
             super().__post_init__()
-            
+
             self.things = dcdb.RelationshipFields.named_left_join(self,
                 "Box2Thing", "box_id", "thing_id",
                 "Thing", child_name_field="name")
