@@ -816,7 +816,9 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     assert toolbox.things['Nails'].quantity == 150
     assert storagebox.things['Bits'].quantity == 12
 
-    toolbox.things['Screwdriver'].quantity = 1
+    copy_screwdriver = toolbox.things['Screwdriver']
+    copy_screwdriver.quantity = 1
+    copy_screwdriver.save()
     assert storagebox.things['Screwdriver'].quantity == 1
 
 
