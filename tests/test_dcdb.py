@@ -762,7 +762,13 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     @dataclass()
     class Box:
         #One way from Box.things[str]
-        things: dcdb.RelationshipFields.named_left_join("Box2Thing.box_id", "Box2Thing.thing_id", "Thing")
+        def __post_init__(self):
+            super().__post_init__()
+            
+            self.things = dcdb.RelationshipFields.named_left_join(self,
+                "Box2Thing", "box_id", "thing_id",
+                "Thing", child_name_field="name")
+
 
     @dataclass()
     class Box2Thing:
