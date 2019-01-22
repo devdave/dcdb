@@ -801,9 +801,9 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     assert hammers not in storagebox.things
 
     assert nails in toolbox.things
-    assert nails not in toolbox.things
+    assert nails not in storagebox.things
 
-    assert bits not in toolbox
+    assert bits not in toolbox.things
     assert bits in storagebox.things
 
     assert tape not in toolbox.things
