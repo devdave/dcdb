@@ -774,6 +774,7 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     class Box2Thing:
         box_id: int
         thing_id: int
+        idx_Box2Thing: dcdb.TableDef = "CONSTRAINT idx_Box2Thing UNIQUE(box_id, thing_id)"
 
     @dataclass()
     class Thing:
