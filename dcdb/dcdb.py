@@ -538,35 +538,40 @@ class DictSelect(collections.abc.MutableMapping):
 @dcs.dataclass()
 class TableCriteria:
     name: str
-    key: str
+    rowid: str
     cls: DBRegisteredTable = None
 
 
 class LeftNamedMultiJoin(collections.abc.MutableMapping):
-
     """
-        left table
-            id
-
-        join_table
-            left_id
-            right_id
-
-        right_table
-
-        left.right[]
+        Relationship handler for many to many relationships.
     """
 
-    def __init__(self, join_table, join_left_rowid, join_right_rowid, child_table, parent_rowid="id", child_rowid="id"):
-        "Box2Thing", "box_id", "thing_id", "Thing"
+    """
+    Select * FROM {self.child.table} 
+    LEFT JOIN {self.join_table} jt ON jt.{self.join_right_rowid} = {self.child.table}.{self.child.key}
+    WHERE
+        jt.{left_rowid} = '{parent[parent_rowid]}'
+                    
+    """
 
-        self.join_table = join_table
+    def __init__(self, parent, join_table, join_left_rowid, join_right_rowid, child_table, child_name_field, parent_rowid="id", child_rowid="id"):
+
+        #"Box2Thing", "box_id", "thing_id", "Thing", child_table_key="name"
+
+        self.join_table = TableCriteria(join_table, None)
         self.join_left_rowid = join_left_rowid
         self.join_right_rowid = join_right_rowid
 
         self.child = TableCriteria(child_table, child_rowid)
+        self.child_name_field = child_name_field
 
         self.parent = TableCriteria(None, parent_rowid)
+        self.parent.cls = parent
+        self.parent_id = parent[self.parent.rowid]
+
+        self.join_table.cls = parent.tables[self.join_table.name]
+        self.child.cls = parent.tables[self.child.name]
 
 
         """
@@ -577,14 +582,83 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
                         
         """
 
-    def __get__(self, instance, owner):
+    def _joined_select(self, discriminator=None, columns=None):
 
-        if self.parent.cls is None:
-            self.parent.cls = instance
-            self.child.cls = self.parent.cls.tables[self.child.name]
+        args = []
+        where_clause = f"jt.{self.join_left_rowid} = {self.parent_id}"
+        if discriminator:
+            args.append(discriminator)
+            where_clause += f" AND {self.child.name}.{self.child_name_field} = ?"
 
-        #TODO, del __get__ ?
+        if columns is None:
+            columns = f"{self.child.name}.*"
+
+        sql = f"""
+        SELECT {columns} FROM {self.child.name}
+        LEFT JOIN {self.join_table.name} jt ON jt.{self.join_right_rowid} = {self.child.name}.{self.child.rowid}
+        WHERE
+        {where_clause}             
+        """.strip()
+        try:
+            return self.parent.cls._meta_.connection.execute(sql, args)
+        except sqlite3.OperationalError:
+            LOG.exception(f"SQL {sql!r}")
+            raise
+
+    def __len__(self):
+        return self._joined_select(columns="COUNT(*)").fetchone()[0]
+
+    def __contains__(self, item: typing.Union[str, DBCommonTable]):
+
+        if isinstance(item, DBCommonTable):
+            key = item[self.child_name_field]
+        else:
+            key = item
+
+        return self._joined_select(discriminator=key).fetchone() is not None
+
+
+
+
+    def __getitem__(self, key: typing.Union[str, DBCommonTable]):
+
+        if isinstance(key, DBCommonTable):
+            key = key[self.child_name_field]
+
+        raw_record = self._joined_select(discriminator=key).fetchone()
+        record = self.child.cls.Assign(**raw_record)
+        return record
+
+
+    def __delitem__(self, key):
+        record = self[key]
+        SQL = f"DELETE FROM {self.join_table.name} WHERE {self.join_left_rowid} = ? AND {self.join_right_rowid} = ?"
+        result = self.parent.cls.connection.execute(SQL, (self.parent_id, record[self.child.key]))
+
+
+    def __iter__(self):
+        for result in self._joined_select():
+            yield self.child.cls.Assign(**result)
+
+    def __setitem__(self, key: str, child_record: DBCommonTable):
+        kwargs = {
+            self.join_left_rowid: self.parent_id
+            , self.join_right_rowid: child_record[self.child.rowid]
+        }
+
+        assert key == child_record[self.child_name_field]
+        join_record = self.join_table.cls(**kwargs)
+
+    def __iadd__(self, other: [DBCommonTable]):
+        for record in other:
+            self[record[self.child_name_field]] = record
+
         return self
+
+
+
+
+
 
 
 
