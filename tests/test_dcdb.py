@@ -32,7 +32,7 @@ def connection(request) -> dcdb.DBConnection:
     return dcdb.DBConnection(str(db_file))
 
 @pytest.fixture()
-def conn2(connection:dcdb.DBConnection):
+def conn2(connection: dcdb.DBConnection):
     """
 
     :param connection: dcdb.DBConnection uses the connection fixture
@@ -48,6 +48,7 @@ def conn2(connection:dcdb.DBConnection):
     connection.bind(Widget)
 
     return connection
+
 
 @dataclass
 class Widget:
@@ -1021,6 +1022,7 @@ def test_Transformers__handles_decimal():
     to_val = "1.0"
 
     assert dcdb
+
 
 def main():
     import sys
