@@ -895,15 +895,17 @@ def test_RelationshipFields_DOT_unordered_list___works_and_replaces_AutoList(con
     class Parent:
         name: str
 
-        Steves = dcdb.RelationshipFields.unordered_list("Children", "parent_id", where="name LIKE 'Steve%'")
+        def _relationships(self, instance):
 
-        Pending = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
+            instance.Steves = dcdb.RelationshipFields.unordered_list("Children", "parent_id", where="name LIKE 'Steve%'")
+
+            instance.Pending = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
                                                          , where=f"status = {ChildTableStatus.PENDING.value}"
                                                          , add_set=("status", ChildTableStatus.PENDING.value,)
                                                          , remove_set=("status", ChildTableStatus.PENDING.value,)
                                                          )
 
-        Complete = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
+            instance.Complete = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
                                                           , where=f"status = {ChildTableStatus.COMPLETE.value}"
                                                           , add_set=("status", ChildTableStatus.COMPLETE.value,)
                                                           , remove_set=("status", ChildTableStatus.PENDING.value,)
