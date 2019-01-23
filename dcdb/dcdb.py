@@ -355,6 +355,21 @@ class SQLOperators(enum.Enum):
     NOTEQ = "!="
     LIKE = "LIKE"
 
+@dcs.dataclass()
+class TableCriteria:
+    name: str
+    rowid: str
+    cls: DBRegisteredTable = None
+    instance: object = None
+
+    @property
+    def value(self):
+        return self.instance[self.rowid]
+
+    @value.setter
+    def value(self, value):
+        self.instance[self.rowid] = value
+
 
 class ListSelect(collections.abc.Sequence):
 
@@ -380,6 +395,10 @@ class ListSelect(collections.abc.Sequence):
         self.parent_name = None
         self.parent_join_field = parent_join_field
         self.parent = None
+
+    def set_owner(self, owner):
+        self.parent = owner
+        self.tables = owner.tables
 
     @property
     def _where(self):
@@ -494,6 +513,11 @@ class DictSelect(collections.abc.MutableMapping):
         self.parent_join_field = parent_join_field
         self.parent = None
 
+    def set_owner(self, owner):
+        self.parent = owner
+        self.tables = owner.tables
+        self.child = self.tables[self.child_name]
+
     def __get__(self, instance: DBCommonTable, owner: type):
         if instance is None:
             return self
@@ -535,13 +559,6 @@ class DictSelect(collections.abc.MutableMapping):
         return self.child.Count(f"{self.relationship_field}={self.parent[self.parent_join_field]}")
 
 
-@dcs.dataclass()
-class TableCriteria:
-    name: str
-    rowid: str
-    cls: DBRegisteredTable = None
-
-
 class LeftNamedMultiJoin(collections.abc.MutableMapping):
     """
         Relationship handler for many to many relationships.
@@ -555,7 +572,7 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
                     
     """
 
-    def __init__(self, parent, join_table, join_left_rowid, join_right_rowid, child_table, child_name_field, parent_rowid="id", child_rowid="id"):
+    def __init__(self, join_table, join_left_rowid, join_right_rowid, child_table, child_name_field, parent_rowid="id", child_rowid="id"):
 
         #"Box2Thing", "box_id", "thing_id", "Thing", child_table_key="name"
 
@@ -567,11 +584,8 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         self.child_name_field = child_name_field
 
         self.parent = TableCriteria(None, parent_rowid)
-        self.parent.cls = parent
-        self.parent_id = parent[self.parent.rowid]
 
-        self.join_table.cls = parent.tables[self.join_table.name]
-        self.child.cls = parent.tables[self.child.name]
+
 
 
         """
@@ -581,6 +595,11 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
             jt.{left_rowid} = '{parent[parent_rowid]}'
                         
         """
+    def set_owner(self, owner):
+        self.parent.instance = owner
+        self.parent_id = self.parent.value
+        self.join_table.cls = owner.tables[self.join_table.name]
+        self.child.cls = owner.tables[self.child.name]
 
     def _joined_select(self, discriminator=None, columns=None):
 
@@ -600,7 +619,7 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         {where_clause}             
         """.strip()
         try:
-            return self.parent.cls._meta_.connection.execute(sql, args)
+            return self.parent.instance._meta_.connection.execute(sql, args)
         except sqlite3.OperationalError:
             LOG.exception(f"SQL {sql!r}")
             raise
@@ -656,59 +675,59 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         return self
 
 
+def AddRelationship(owner, name, rel_instance):
+    # setattr(type(owner, name, rel_instance)
+    setattr(owner, name, rel_instance)
+    rel_instance.set_owner(owner)
 
 
 
+class LocalOne2One:
+
+    def __init__(self, owner_rowid: str, target_name_fk: str):
+        #("target_id", "TargetTable.id")
+
+        self.__owner = TableCriteria(None, owner_rowid)
+        self.__target = TableCriteria(*target_name_fk.split("."))
 
 
+    def set_owner(self, record):
+        self.__owner.instance = record
+        self.__target.cls = record.tables[self.__target.name]
 
 
-class AutoSelect:
-
-    def __init__(self, target_table: str, target_column: str, source_column: str):
-        self.__target = None
-
-        self.__target_table = target_table
-        self.__target_column = target_column
-        self.__source_column = source_column
-
-        super().__init__()
 
     def __get__(self, owner: DBCommonTable, objtype: DBCommonTable = None):
-        """
 
-        :type owner:
-        """
-        if objtype is None:
-            return self
-
-        # Let the crazy abuse of semi-private properties begin!
-        fk_id = getattr(owner, self.__source_column)
-        if fk_id is None:
-            # TODO abuse some sort of proxy class to catch owner.autoselect_property.Create to auto assign
-            # to this autoselect
-            return owner._meta_.connection.t[self.__target_table]
-
-        if self.__target is None:
-            self.__target = owner._meta_.connection.t[self.__target_table].Get(f"{self.__target_column}=?", fk_id)
-
-        return self.__target
-
-    def __set__(self, owner, value):
-
-        if isinstance(value, DBCommonTable):
-            setattr(owner, self.__source_column, getattr(value, self.__target_column))
+        if self.__owner.value is not None:
+            where_str = f"{self.__target.rowid}={self.__owner.value}"
+            return self.__target.cls.Get(where_str)
         else:
-            setattr(owner, self.__source_column, value)
+            return None
 
-    def __delete__(self, obj):
-        setattr(obj, self.__source_column, None)
+    def __set__(self, owner, target_record):
+
+        assert isinstance(target_record, DBCommonTable) is True
+        self.__owner.value = target_record[self.__target.rowid]
+        owner.save()
+        return self
+
+    def __delete__(self, owner_table):
+        where_str = f"{self.__target.rowid}={self.__owner.value}"
+        target_record = self.__target.cls.Get(where_str) # type: DBCommonTable
+        target_record.delete()
+
+        self.__owner.value = None
+        owner_table.save()
+
+
+        return self
 
 
 class RelationshipFields:
     dict = DictSelect
     unordered_list = ListSelect
-    one_to_one = AutoSelect
+    local_one_to_one = LocalOne2One
     named_left_join = LeftNamedMultiJoin
 
 
@@ -1420,17 +1439,22 @@ class DBDirtyRecordMixin:
     def _is_dirty(self):
         return self._dirty_record
 
-    def _set_dirty(self):
-        if self._meta_.connection._dirty_record_add(self):
-            object.__setattr__(self, "_dirty_record", True)
+    def _set_dirty(self, key=None, value=None):
+
+        if key in self._meta_.fields:
+            if self._meta_.connection._dirty_record_add(self):
+                object.__setattr__(self, "_dirty_record", True)
 
     def _dirty_reset(self):
         self._meta_.connection._dirty_record_remove(self)
         object.__setattr__(self, "_dirty_record", False)
 
     def __setattr__(self, key, value):
-        self._set_dirty()
-        object.__setattr__(self, key, value)
+        if key in self._meta_.fields:
+            self._set_dirty(key, value)
+
+        super().__setattr__(key, value)
+        return value
 
 
 class DBMeta:
@@ -1442,6 +1466,17 @@ class DBMeta:
         self.fields = fields
         self.indexes = indexes
 
+
+class AttrDict:
+
+    def __init__(self):
+        super().__setattr__("contents", {})
+
+    def __setattr__(self, key, value):
+        self.contents[key] = value
+
+    def __setitem__(self, key, value):
+        self.contents[key] = value
 
 @dcs.dataclass
 class DBCommonTable(DBDirtyRecordMixin):
@@ -1468,7 +1503,14 @@ class DBCommonTable(DBDirtyRecordMixin):
             super().__setattr__(field.name, value)
 
         # super().__post_init__()
+        if hasattr(self, "_relationships"):
+            rels = AttrDict()
+            self._relationships(rels)
+            for name, handler in rels.contents.items():
+                AddRelationship(self, name, handler)
+
         self._init_dirty_record_tracking_()
+
 
     def __setitem__(self, key, value):
         if key in self._meta_.fields:

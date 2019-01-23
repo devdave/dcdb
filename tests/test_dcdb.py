@@ -31,6 +31,7 @@ def connection(request) -> dcdb.DBConnection:
 
     return dcdb.DBConnection(str(db_file))
 
+
 @pytest.fixture()
 def conn2(connection: dcdb.DBConnection):
     """
@@ -520,50 +521,51 @@ def test_DBTableRegistry___tables_direct_children(connection):
     assert len(children) == 2
 
 
-
-
-def test_AutoSelect___works(connection):
-
+def test_RelationshipFields_DOT_local_one_to_one___works(connection):
     @dataclass()
-    class Foo:
+    class TargetTable:
         name: str
         some_num: int
 
+
     @dataclass()
-    class Bar:
+    class OwnerTable:
         name: str
         other_num: int
-        parent_id: int = None
+        target_id: int = None
 
-        parent = dcdb.AutoSelect("Foo", "id", "parent_id")
-
-    connection.binds(Foo, Bar)
-
-    parent_record = connection.t.Foo(name="Bert", some_num=1234)
-    child_record = connection.t.Bar(name="Brad", other_num=56)
-
-    child_record.parent = parent_record
-    child_record.update()
-
-    assert child_record.parent_id == parent_record.id
-    assert child_record.parent.name == parent_record.name
-
-    del child_record.parent
-    assert child_record.parent_id is None
+        def _relationships(self, instance):
+            instance.target = dcdb.RelationshipFields.local_one_to_one("target_id", "TargetTable.id")
 
 
-def test_RelationshipFields_DOT_unordered_list__works(connection:dcdb.DBConnection):
-    #whoops, realized this isn't tested inside dcdb but in harvester
+    connection.binds(TargetTable, OwnerTable)
+
+    target_record = connection.t.TargetTable(name="Joe", some_num=1234)
+    owner_record = connection.t.OwnerTable(name="Brad", other_num=56)
+
+    owner_record.target = target_record
+
+    assert hasattr(owner_record, "target") is True
+    assert owner_record.target_id == target_record.id
+    assert owner_record.target.name == target_record.name
+
+    del owner_record.target
+    assert owner_record.target is None
+
+
+def test_RelationshipFields_DOT_unordered_list__works(connection: dcdb.DBConnection):
+    # whoops, realized this isn't tested inside dcdb but in harvester
 
     @dataclass()
     class Box:
-        pass
-        contents = dcdb.RelationshipFields.unordered_list("Widget", "box_id")
+
+        def _relationships(self, instance):
+            instance.contents = dcdb.RelationshipFields.unordered_list("Widget", "box_id")
 
     @dataclass()
     class Widget:
-        name:str
-        quantity:int
+        name: str
+        quantity: int
         box_id: int = None
 
     connection.bind(Box, Widget)
@@ -583,11 +585,10 @@ def test_RelationshipFields_DOT_unordered_list__works(connection:dcdb.DBConnecti
     assert box.contents[1].name == "Measuring tape"
 
     with pytest.raises(TypeError):
-        box.contents[5] = connection.t.Widget(name="Stuff", quantity=10**5)
+        box.contents[5] = connection.t.Widget(name="Stuff", quantity=10 ** 5)
 
     assert len(box.contents) == 3
     assert connection.t.Widget.Count() == 4
-
 
     widget = box.contents.first()
     assert widget.name == "Nails"
@@ -621,7 +622,8 @@ def test_ReltionshipFields_DOT_dict__by_order(connection: dcdb.DBConnection):
 
     @dataclass()
     class Box:
-        widget = dcdb.RelationshipFields.dict("Thing.name", "parent_id", by_order="version")
+        def _relationships(self, instance):
+            instance.widget = dcdb.RelationshipFields.dict("Thing.name", "parent_id", by_order="version")
 
     @dataclass()
     class Thing:
@@ -649,7 +651,8 @@ def test_RelationshipFields_dot_dict__works(connection: dcdb.DBConnection):
     class House:
         price: float
         name: str
-        furniture = dcdb.RelationshipFields.dict("Furniture", "type", "house_id")
+        def _relationships(self, instance):
+            instance.furniture = dcdb.RelationshipFields.dict("Furniture", "type", "house_id")
 
     @dataclass()
     class Furniture:
@@ -695,7 +698,8 @@ def test_RelationshipFields_dict__dotted_argument(connection):
     class House:
         price: float
         name: str
-        furniture = dcdb.RelationshipFields.dict("Furniture.type", "house_id")
+        def _relationships(self, instance):
+            instance.furniture = dcdb.RelationshipFields.dict("Furniture.type", "house_id")
 
     @dataclass()
     class Furniture:
@@ -718,14 +722,12 @@ def test_RelationshipFields_dict__dotted_argument(connection):
 def test_RelationshipFields_Named_Left_Join__works(connection):
     @dataclass()
     class Box:
-        #One way from Box.things[str]
-        def __post_init__(self):
-            super().__post_init__()
+        # One way from Box.things[str]
 
-            self.things = dcdb.RelationshipFields.named_left_join(self,
-                "Box2Thing", "box_id", "thing_id",
-                "Thing", child_name_field="name")
-
+        def _relationships(self, instance):
+            instance.things = dcdb.RelationshipFields.named_left_join(
+                                                                  "Box2Thing", "box_id", "thing_id",
+                                                                  "Thing", child_name_field="name")
 
     @dataclass()
     class Box2Thing:
