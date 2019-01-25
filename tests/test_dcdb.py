@@ -956,7 +956,8 @@ def test_RelationshipFields_DOT_unordered_list__dotted_relations(connection):
     @dataclass()
     class Boss:
         name: str
-        employees = dcdb.RelationshipFields.unordered_list("Employee", "boss_id")
+        def _relationships(self, instance):
+            instance.employees = dcdb.RelationshipFields.unordered_list("Employee", "boss_id")
 
     @dataclass()
     class Employee:
