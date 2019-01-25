@@ -637,6 +637,8 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         return self._joined_select(discriminator=key).fetchone() is not None
 
 
+    def keys(self):
+        return [r[0] for r in self._joined_select(columns=self.child_name_field).fetchall()]
 
 
     def __getitem__(self, key: typing.Union[str, DBCommonTable]):
