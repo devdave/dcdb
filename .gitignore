@@ -117,3 +117,4 @@ dmypy.json
 .idea/dataSources.xml
 .idea/dataSources/*
 tests/db/*.sqlite
+*.prof
