@@ -981,33 +981,6 @@ def test_RelationshipFields_DOT_unordered_list__dotted_relations(connection):
     assert connection.t.Employee.Count() == 4
 
 
-def test_AutoKeyedList__works(connection):
-    return
-
-    @dataclass()
-    class Boss:
-
-        employees = dcdb.AutoKeyedList("Boss.id", "Employee.boss_id", "Employee.name")
-
-    @dataclass()
-    class Employee:
-        name: str
-        boss_id: int
-
-    connection.binds(Boss, Employee)
-
-    employee_names = ["Alice", "Bob", "Kate", "Steve", "Lana", "Archer"]
-    boss = connection.tables.Boss()
-
-    for employee_name in employee_names:
-        connection.table.Employee(name=employee_name, boss_id=boss.id)
-
-    for employee_name in employee_names:
-        assert employee_name in boss.employees
-
-    assert len(boss.employees) == 6
-
-
 def test_Transformers_AND_Datetime_dot_date():
     actual_date = dt.date(2018, 3, 5)
     actual_date_str = "2018-03-05"
