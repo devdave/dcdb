@@ -542,6 +542,9 @@ def test_RelationshipFields_DOT_local_one_to_one___works(connection):
 
     target_record = connection.t.TargetTable(name="Joe", some_num=1234)
     owner_record = connection.t.OwnerTable(name="Brad", other_num=56)
+    useless_owner_record = connection.t.OwnerTable(name="Bungle", other_num=123)
+
+    assert owner_record.target != useless_owner_record.target
 
     owner_record.target = target_record
 
