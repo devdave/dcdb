@@ -677,13 +677,6 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         return self
 
 
-def AddRelationship(owner, name, rel_instance):
-    # setattr(type(owner, name, rel_instance)
-    setattr(owner, name, rel_instance)
-    rel_instance.set_owner(owner)
-
-
-
 class LocalOne2One:
 
     def __init__(self, owner_rowid: str, target_name_fk: str):
