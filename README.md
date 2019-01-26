@@ -28,7 +28,16 @@ Heavily under development
 
 ## Todo
 
+### High priority
+   Currently the data model is an abomination of proxies around a trimmed down dataclass'd class.
+   This worked in the short term but this structure needs to be replaced by a dynamically generated
+   class of instrumented attributes because the relationship handlers are breaking with the current 
+   design.
+   
+   In addition, there are too many wasteful/slow calls to the sqlite driver which could be avoided with 
+   some sort of record registry along with a unit of work like mechanism similar to sqlalchemy.
 
+### Low priority
 1. Joins    
 2. Transactions  
 3. Switch to APSW?

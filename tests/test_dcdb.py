@@ -546,11 +546,13 @@ def test_RelationshipFields_DOT_local_one_to_one___works(connection):
 
     assert owner_record.target != useless_owner_record.target
 
-    owner_record.target = target_record
+    owner_record.target.set(target_record)
 
     assert hasattr(owner_record, "target") is True
     assert owner_record.target_id == target_record.id
     assert owner_record.target.name == target_record.name
+
+    return
 
     del owner_record.target
     assert owner_record.target is None

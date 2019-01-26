@@ -676,6 +676,9 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
 
         return self
 
+    def add(self, new_child):
+        self[new_child[self.child_name_field]] = new_child
+
 
 class LocalOne2One:
 
@@ -690,7 +693,10 @@ class LocalOne2One:
         self.__owner.instance = record
         self.__target.cls = record.tables[self.__target.name]
 
-
+    def __getattr__(self, item):
+        where_str = f"{self.__target.rowid}={self.__owner.value}"
+        record = self.__target.cls.Get(where_str)
+        return getattr(record, item)
 
     def __get__(self, owner: DBCommonTable, objtype: DBCommonTable = None):
 
@@ -706,6 +712,13 @@ class LocalOne2One:
         self.__owner.value = target_record[self.__target.rowid]
         owner.save()
         return self
+
+    def set(self, target_record):
+        assert isinstance(target_record, DBCommonTable) is True
+        self.__owner.value = target_record[self.__target.rowid]
+        self.__owner.instance.save()
+        return self
+
 
     def __delete__(self, owner_table):
         where_str = f"{self.__target.rowid}={self.__owner.value}"
@@ -1484,6 +1497,14 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     id: int  # TODO should I make this an initvar?
 
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # super().__post_init__()
+
+
+
     def __post_init__(self):
 
         LOG.debug("Finalization with __post_init__")
@@ -1497,12 +1518,13 @@ class DBCommonTable(DBDirtyRecordMixin):
             value = cast_from_database(orig_value, field.type)
             super().__setattr__(field.name, value)
 
-        # super().__post_init__()
         if hasattr(self, "_relationships"):
             rels = AttrDict()
             self._relationships(rels)
             for name, handler in rels.contents.items():
-                AddRelationship(self, name, handler)
+                handler.set_owner(self)
+                setattr(self, name, handler)
+
 
         self._init_dirty_record_tracking_()
 
