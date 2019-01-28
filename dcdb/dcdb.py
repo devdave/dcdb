@@ -371,6 +371,29 @@ class TableCriteria:
         self.instance[self.rowid] = value
 
 
+class DescriptorFactory:
+
+    def __init__(self, handler):
+        self.handler = handler
+        self.args = []
+        self.kwargs = {}
+
+    def __call__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        return self
+
+    def __get__(self, instance, owner):
+
+        if instance is None:
+            return self
+
+        handler = self.handler(*self.args, **self.kwargs)
+        handler.set_owner(instance)
+        return handler
+
+
+
 class ListSelect(collections.abc.Sequence):
 
     def __init__(self, child_name, relationship_field=None, parent_join_field="id", where=None, add_set=None,
@@ -410,9 +433,9 @@ class ListSelect(collections.abc.Sequence):
         if instance is None:
             return self
 
-        if self.parent is None:
-            self.parent = instance
-            self.tables = instance.tables
+
+        self.parent = instance
+        self.tables = instance.tables
 
         return self
 
@@ -584,9 +607,7 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         self.child_name_field = child_name_field
 
         self.parent = TableCriteria(None, parent_rowid)
-
-
-
+        self.parent_id = None
 
         """
         Select * FROM {self.child.table} 
@@ -595,6 +616,8 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
             jt.{left_rowid} = '{parent[parent_rowid]}'
                         
         """
+
+
     def set_owner(self, owner):
         self.parent.instance = owner
         self.parent_id = self.parent.value
@@ -627,7 +650,16 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
     def __len__(self):
         return self._joined_select(columns="COUNT(*)").fetchone()[0]
 
-    def __contains__(self, item: typing.Union[str, DBCommonTable]):
+
+    def __contains__(self, item: typing.Union[str, DBCommonTable])->bool:
+        """
+        Checks if item is a str or record instance
+
+        checks the relevant table to see if it contains the provided item
+
+        :param item:
+        :return bool:
+        """
 
         if isinstance(item, DBCommonTable):
             key = item[self.child_name_field]
@@ -693,12 +725,19 @@ class LocalOne2One:
         self.__owner.instance = record
         self.__target.cls = record.tables[self.__target.name]
 
+
     def __getattr__(self, item):
         where_str = f"{self.__target.rowid}={self.__owner.value}"
         record = self.__target.cls.Get(where_str)
         return getattr(record, item)
 
     def __get__(self, owner: DBCommonTable, objtype: DBCommonTable = None):
+
+
+        self.__owner.instance = owner
+        self.__target.cls = owner.tables[self.__target.name]
+
+        return self
 
         if self.__owner.value is not None:
             where_str = f"{self.__target.rowid}={self.__owner.value}"
@@ -719,6 +758,17 @@ class LocalOne2One:
         self.__owner.instance.save()
         return self
 
+    def clear(self):
+        self.__owner.value = None
+        self.__owner.instance.save()
+
+    def delete(self):
+        self.clear()
+        where_str = f"{self.__target.rowid}={self.__owner.value}"
+        target_record = self.__target.cls.Get(where_str)  # type: DBCommonTable
+        target_record.delete()
+
+
 
     def __delete__(self, owner_table):
         where_str = f"{self.__target.rowid}={self.__owner.value}"
@@ -732,12 +782,25 @@ class LocalOne2One:
         return self
 
 
-class RelationshipFields:
-    dict = DictSelect
-    unordered_list = ListSelect
-    local_one_to_one = LocalOne2One
-    named_left_join = LeftNamedMultiJoin
+class _RelationshipFields:
 
+    @property
+    def dict(self):
+        return DescriptorFactory(DictSelect)
+
+    @property
+    def unordered_list(self):
+        return DescriptorFactory(ListSelect)
+
+    @property
+    def local_one_to_one(self):
+        return DescriptorFactory(LocalOne2One)
+
+    @property
+    def named_left_join(self):
+        return DescriptorFactory(LeftNamedMultiJoin)
+
+RelationshipFields = _RelationshipFields()
 
 # class ProxyList(list):
 #
@@ -1136,6 +1199,7 @@ class DBConnection:
             if name in ignore: continue
             if name.startswith("_"): continue
             if inspect.isclass(val):
+                if hasattr(val, "_NO_BIND_"): continue
                 if hasattr(val, "__dataclass_fields__"):
                     self.bind(val, create_table=create_table)
 

@@ -534,8 +534,7 @@ def test_RelationshipFields_DOT_local_one_to_one___works(connection):
         other_num: int
         target_id: int = None
 
-        def _relationships(self, instance):
-            instance.target = dcdb.RelationshipFields.local_one_to_one("target_id", "TargetTable.id")
+        target = dcdb.RelationshipFields.local_one_to_one("target_id", "TargetTable.id")
 
 
     connection.binds(TargetTable, OwnerTable)
@@ -544,7 +543,6 @@ def test_RelationshipFields_DOT_local_one_to_one___works(connection):
     owner_record = connection.t.OwnerTable(name="Brad", other_num=56)
     useless_owner_record = connection.t.OwnerTable(name="Bungle", other_num=123)
 
-    assert owner_record.target != useless_owner_record.target
 
     owner_record.target.set(target_record)
 
@@ -552,10 +550,8 @@ def test_RelationshipFields_DOT_local_one_to_one___works(connection):
     assert owner_record.target_id == target_record.id
     assert owner_record.target.name == target_record.name
 
-    return
-
-    del owner_record.target
-    assert owner_record.target is None
+    owner_record.target.clear()
+    assert owner_record.target_id is None
 
 
 def test_RelationshipFields_DOT_unordered_list__works(connection: dcdb.DBConnection):
@@ -564,8 +560,8 @@ def test_RelationshipFields_DOT_unordered_list__works(connection: dcdb.DBConnect
     @dataclass()
     class Box:
 
-        def _relationships(self, instance):
-            instance.contents = dcdb.RelationshipFields.unordered_list("Widget", "box_id")
+
+        contents = dcdb.RelationshipFields.unordered_list("Widget", "box_id")
 
     @dataclass()
     class Widget:
@@ -627,8 +623,7 @@ def test_ReltionshipFields_DOT_dict__by_order(connection: dcdb.DBConnection):
 
     @dataclass()
     class Box:
-        def _relationships(self, instance):
-            instance.widget = dcdb.RelationshipFields.dict("Thing.name", "parent_id", by_order="version")
+        widget = dcdb.RelationshipFields.dict("Thing.name", "parent_id", by_order="version")
 
     @dataclass()
     class Thing:
@@ -656,8 +651,7 @@ def test_RelationshipFields_dot_dict__works(connection: dcdb.DBConnection):
     class House:
         price: float
         name: str
-        def _relationships(self, instance):
-            instance.furniture = dcdb.RelationshipFields.dict("Furniture", "type", "house_id")
+        furniture = dcdb.RelationshipFields.dict("Furniture", "type", "house_id")
 
     @dataclass()
     class Furniture:
@@ -703,8 +697,7 @@ def test_RelationshipFields_dict__dotted_argument(connection):
     class House:
         price: float
         name: str
-        def _relationships(self, instance):
-            instance.furniture = dcdb.RelationshipFields.dict("Furniture.type", "house_id")
+        furniture = dcdb.RelationshipFields.dict("Furniture.type", "house_id")
 
     @dataclass()
     class Furniture:
@@ -729,10 +722,9 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     class Box:
         # One way from Box.things[str]
 
-        def _relationships(self, instance):
-            instance.things = dcdb.RelationshipFields.named_left_join(
-                                                                  "Box2Thing", "box_id", "thing_id",
-                                                                  "Thing", child_name_field="name")
+        things = dcdb.RelationshipFields.named_left_join(
+            "Box2Thing", "box_id", "thing_id",
+            "Thing", child_name_field="name")
 
     @dataclass()
     class Box2Thing:
@@ -764,14 +756,14 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     assert hammers in toolbox.things
     assert hammers not in storagebox.things
 
-    assert nails in toolbox.things
     assert nails not in storagebox.things
+    assert nails in toolbox.things
 
     assert bits not in toolbox.things
-    assert bits in storagebox.things
+    assert bits in storagebox
 
-    assert tape not in toolbox.things
-    assert tape in storagebox.things
+    assert tape not in toolbox
+    assert tape in storagebox
 
     assert connection.t.Thing.Count() == 5
     assert len(toolbox.things) == 3
