@@ -150,6 +150,7 @@ class AbstractTransformedClass(abc.ABC):
     def To(cls, value: typing.Any, value_type: typing.Union[type, typing.Any]) -> str:
         pass
 
+ConverterPair = namedtuple("ConverterPair", "To,From")
 
 class Transformers:
     """
@@ -173,7 +174,7 @@ class Transformers:
 
 
     """
-    ConverterPair = namedtuple("ConverterPair", "To,From")
+
 
     _transforms = {} # type: typing.Dict[str, ConverterPair]
 
