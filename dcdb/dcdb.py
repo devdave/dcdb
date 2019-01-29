@@ -182,8 +182,7 @@ class Transformers:
     @classmethod
     def Set(cls, transform_type: typing.Union[type, object]
             , to_func: typing.Callable[[typing.Any, T], typing.AnyStr]
-            , from_func: typing.Callable[[typing.Any, T],T[typing.Any]]
-            )-> typing.NoReturn
+            , from_func: typing.Callable[[typing.Any, T],T[typing.Any]])-> typing.NoReturn:
         cls._transforms[transform_type] = ConverterPair(to_func, from_func)
 
     @classmethod
