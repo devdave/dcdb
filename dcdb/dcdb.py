@@ -131,10 +131,14 @@ LOG = logging.getLogger(__name__)
 # Avoid application code from having to import sqlite3
 IntegrityError = sqlite3.IntegrityError
 
-ConverterPair = namedtuple("ConverterPair", "To,From")
+
+
 
 
 class AbstractTransformedClass(abc.ABC):
+    """
+    Intended as a integrity checker for other transformer classes.
+    """
 
     @classmethod
     @abc.abstractmethod
@@ -169,12 +173,16 @@ class Transformers:
 
 
     """
-    _transforms = {}
+    ConverterPair = namedtuple("ConverterPair", "To,From")
 
+    _transforms = {} # type: typing.Dict[str, ConverterPair]
+
+    T = typing.TypeVar("T")
     @classmethod
     def Set(cls, transform_type: typing.Union[type, object]
-            , to_func: typing.Callable[typing.Any, typing.Union[type, object]]
-            , from_func: typing.Callable[typing.Any, typing.Union[type, object]]) -> None:
+            , to_func: typing.Callable[[typing.Any, T], typing.AnyStr]
+            , from_func: typing.Callable[[typing.Any, T],T[typing.Any]]
+            )-> typing.NoReturn
         cls._transforms[transform_type] = ConverterPair(to_func, from_func)
 
     @classmethod
@@ -183,12 +191,12 @@ class Transformers:
 
     # TODO deprecate transformers or rework, not happy having to pass tranform_type everywhere
     @classmethod
-    def To(cls, value, transform_type: type) -> str:
+    def To(cls, value, transform_type: T) -> str:
         return cls._transforms[transform_type].To(value, transform_type)
 
     # TODO deprecate transformers or rework, not happy having to pass tranform_type everywhere
     @classmethod
-    def From(cls, value, transform_type) -> object:
+    def From(cls, value: str, transform_type: T) -> T[typing.Any]:
         return cls._transforms[transform_type].From(value, transform_type)
 
 
@@ -205,7 +213,10 @@ Transformers.Set(dt.time
                  , lambda v, t: dt.datetime.strptime(v, "%c").time())
 
 
-class TransformDatetimeType:
+class TransformDatetimeType(AbstractTransformedClass):
+    """
+    Utility for handling various DateTime formats
+    """
     def __init__(self, container, format):
         self.container = container
         self.format = format
@@ -217,9 +228,9 @@ class TransformDatetimeType:
         return value if isinstance(value, str) else value.strftime(self.format)
 
 
-def cast_from_database(value: object, value_type: type):
+def cast_from_database(value: typing.Any, value_type: typing.Union[type, AbstractTransformedClass]):
     """
-    Transformer which ensures that None is None, int is int, etc.
+    Common transformer which ensures that None is None, int is int, etc.
 
     :param value:
     :param value_type: The type that value must be returned as
@@ -252,7 +263,7 @@ def cast_from_database(value: object, value_type: type):
     return retval
 
 
-def cast_to_database(value: typing.Any, value_type: typing.Union[type, object]) -> str:
+def cast_to_database(value: typing.Any, value_type: typing.Union[type, AbstractTransformedClass]) -> str:
     """
     Converts the basic types to something compatible with the database
 
@@ -372,6 +383,11 @@ class TableCriteria:
 
 
 class DescriptorFactory:
+    """
+        Factory to separate each handler so they don't behave
+        as class vars.
+
+    """
 
     def __init__(self, handler):
         self.handler = handler
@@ -783,21 +799,28 @@ class LocalOne2One:
 
 
 class _RelationshipFields:
+    """
+        Consolidates Relationship handlers into one place.
+
+        Each attribute is a property descriptor so that
+        each :class:`DescriptorFactory` is a unique instance per class definition.
+
+    """
 
     @property
-    def dict(self):
+    def dict(self)->DictSelect:
         return DescriptorFactory(DictSelect)
 
     @property
-    def unordered_list(self):
+    def unordered_list(self)->ListSelect:
         return DescriptorFactory(ListSelect)
 
     @property
-    def local_one_to_one(self):
+    def local_one_to_one(self)->LocalOne2One:
         return DescriptorFactory(LocalOne2One)
 
     @property
-    def named_left_join(self):
+    def named_left_join(self)->LeftNamedMultiJoin:
         return DescriptorFactory(LeftNamedMultiJoin)
 
 RelationshipFields = _RelationshipFields()
