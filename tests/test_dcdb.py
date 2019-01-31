@@ -973,6 +973,9 @@ def test_RelationshipFields_DOT_unordered_list__dotted_relations(connection):
 
     assert len(boss.employees) == 3
     assert connection.t.Employee.Count() == 4
+    for employee in boss.employees:
+        assert employee in [emp1, emp2, emp3]
+        assert employee not in [emp4]
 
 
 def test_Transformers_AND_Datetime_dot_date():
