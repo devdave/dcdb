@@ -892,17 +892,14 @@ def test_RelationshipFields_DOT_unordered_list___works_and_replaces_AutoList(con
     class Parent:
         name: str
 
-        def _relationships(self, instance):
-
-            instance.Steves = dcdb.RelationshipFields.unordered_list("Children", "parent_id", where="name LIKE 'Steve%'")
-
-            instance.Pending = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
+        Steves = dcdb.RelationshipFields.unordered_list("Children", "parent_id", where="name LIKE 'Steve%'")
+        Pending = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
                                                          , where=f"status = {ChildTableStatus.PENDING.value}"
                                                          , add_set=("status", ChildTableStatus.PENDING.value,)
                                                          , remove_set=("status", ChildTableStatus.PENDING.value,)
                                                          )
 
-            instance.Complete = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
+        Complete = dcdb.RelationshipFields.unordered_list("Children", "parent_id"
                                                           , where=f"status = {ChildTableStatus.COMPLETE.value}"
                                                           , add_set=("status", ChildTableStatus.COMPLETE.value,)
                                                           , remove_set=("status", ChildTableStatus.PENDING.value,)
@@ -953,8 +950,7 @@ def test_RelationshipFields_DOT_unordered_list__dotted_relations(connection):
     @dataclass()
     class Boss:
         name: str
-        def _relationships(self, instance):
-            instance.employees = dcdb.RelationshipFields.unordered_list("Employee", "boss_id")
+        employees = dcdb.RelationshipFields.unordered_list("Employee", "boss_id")
 
     @dataclass()
     class Employee:
