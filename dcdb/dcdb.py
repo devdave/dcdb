@@ -143,12 +143,12 @@ class AbstractTransformedClass(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def From(cls, value: str, value_type: typing.Union[object, type]) -> object:
-        pass
+        pass  # pragma: no cover
 
     @classmethod
     @abc.abstractmethod
     def To(cls, value: typing.Any, value_type: typing.Union[type, typing.Any]) -> str:
-        pass
+        pass  # pragma: no cover
 
 ConverterPair = namedtuple("ConverterPair", "To,From")
 
@@ -222,7 +222,7 @@ class TransformDatetimeType(AbstractTransformedClass):
         self.format = format
 
     def From(self, value: typing.Any, transform_type: typing.Union[type, object]):
-        return self.container.strptime(value, self.format)
+        return self.container.strptime(str(value), self.format)
 
     def To(self, value: typing.Any, transform_type: typing.Union[type, object]):
         return value if isinstance(value, str) else value.strftime(self.format)

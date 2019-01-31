@@ -997,6 +997,28 @@ def test_Transformers__handles_decimal():
 
     assert dcdb
 
+def test_TransformDatetimeType_ColumnDef___allow_default_time(connection):
+
+    import datetime
+
+    @dataclass()
+    class ThatTime:
+        created_on: dcdb.TransformDatetimeType(datetime.datetime, "%Y-%m-%d T%H:%M") = dcdb.ColumnDef("TIMESTAMP DEFAULT (strftime('%Y-%m-%d T%H:%M','now','localtime'))")
+
+    connection.bind(ThatTime)
+
+
+    now = datetime.datetime.now()
+    created_now = connection.t.ThatTime()
+
+    assert created_now.created_on.year == now.year
+    assert created_now.created_on.month == now.month
+    assert created_now.created_on.day == now.day
+    assert created_now.created_on.hour == now.hour
+    assert now.minute+1 > created_now.created_on.minute > now.minute - 1
+
+
+
 
 def main():
     import sys
