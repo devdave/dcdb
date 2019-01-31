@@ -227,6 +227,17 @@ class TransformDatetimeType(AbstractTransformedClass):
     def To(self, value: typing.Any, transform_type: typing.Union[type, object]):
         return value if isinstance(value, str) else value.strftime(self.format)
 
+class DefaultLocalTime(TransformDatetimeType):
+    # created_on: dcdb.TransformDatetimeType(datetime.datetime, "%Y-%m-%d T%H:%M") = dcdb.ColumnDef(
+    #    "TIMESTAMP DEFAULT (strftime('%Y-%m-%d T%H:%M','now','localtime'))")
+
+    FormatStr = "%Y-%m-%d T%H:%M:%S"
+    ColDef = f"TIMESTAMP DEFAULT (strftime('{FormatStr}','now','localtime'))"
+
+    def __init__(self):
+        super().__init__(dt.datetime, self.FormatStr)
+
+
 
 def cast_from_database(value: typing.Any, value_type: typing.Union[type, AbstractTransformedClass]):
     """

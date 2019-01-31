@@ -997,13 +997,14 @@ def test_Transformers__handles_decimal():
 
     assert dcdb
 
-def test_TransformDatetimeType_ColumnDef___allow_default_time(connection):
+
+def test_DefaultLocalTime___allow_default_time(connection):
 
     import datetime
 
     @dataclass()
     class ThatTime:
-        created_on: dcdb.TransformDatetimeType(datetime.datetime, "%Y-%m-%d T%H:%M") = dcdb.ColumnDef("TIMESTAMP DEFAULT (strftime('%Y-%m-%d T%H:%M','now','localtime'))")
+        created_on: dcdb.DefaultLocalTime() = dcdb.DefaultLocalTime.ColDef
 
     connection.bind(ThatTime)
 
