@@ -468,6 +468,10 @@ class ListSelect(collections.abc.Sequence):
 
         return self._select(index, limit=1).fetchone()
 
+    def __iter__(self)->typing.Generator[DBCommonTable]:
+        for record in self._select(0, limit=-1):
+            yield record
+
     def __setitem__(self, _: int, record: DBCommonTable):
         raise TypeError("Assigning records to a specific index is not supported with ListSelect")
 
@@ -1373,11 +1377,12 @@ class DBCommonTable(DBDirtyRecordMixin):
             super().__setattr__(field.name, value)
 
         if hasattr(self, "_relationships"):
-            rels = AttrDict()
-            self._relationships(rels)
-            for name, handler in rels.contents.items():
-                handler.set_owner(self)
-                setattr(self, name, handler)
+            raise DeprecationWarning("Remove from code, no longer used")
+            # rels = AttrDict()
+            # self._relationships(rels)
+            # for name, handler in rels.contents.items():
+            #     handler.set_owner(self)
+            #     setattr(self, name, handler)
 
 
         self._init_dirty_record_tracking_()
@@ -1483,7 +1488,7 @@ class DBCursorProxy:
     def __getattr__(self, key):
         return getattr(self._cursor, key)
 
-    def __iter__(self):
+    def __iter__(self)-> typing.Generator[DBCommonTable]:
         for row in self.fetchmany():
             yield row
 

@@ -760,10 +760,10 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     assert nails in toolbox.things
 
     assert bits not in toolbox.things
-    assert bits in storagebox
+    assert bits in storagebox.things
 
-    assert tape not in toolbox
-    assert tape in storagebox
+    assert tape not in toolbox.things
+    assert tape in storagebox.things
 
     assert connection.t.Thing.Count() == 5
     assert len(toolbox.things) == 3
