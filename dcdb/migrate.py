@@ -34,6 +34,7 @@ import sqlite3
 import pathlib
 import dcdb
 
+import migrate_lib
 
 template = """
 from dcdb import migrate
@@ -41,7 +42,8 @@ from dcdb import migrate
 config = dict()
 config['SRC'] = "{database_filepath}"
 config['REPO'] = "{changeset_dirpath}"
-config['models'] = "path.2.module"
+config['model_mod'] = False # "path.2.module" | <module>
+config['models'] = False # bool | list - if not False will throw a warning as it uses bind_scan to find new/missing models
 
 if __name__ == "__main__":
     migrate.run(config)
@@ -49,6 +51,7 @@ if __name__ == "__main__":
 
 
 @click.group()
+@click.argument("--database")
 def cli():
     pass
 

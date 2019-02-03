@@ -3,6 +3,7 @@ import time
 import pathlib
 import logging
 import dataclasses as dcs
+from unittest.mock import MagicMock
 
 from dcdb import dcdb
 from dcdb import migrate_lib as ml
@@ -52,8 +53,38 @@ def test_Schema_correct_manifest_with_tables(conn):
     class Bar:
         pass
 
+    models = MagicMock()
+    models.Foo = Foo
+    models.Bar = Bar
+
     conn.bind(Foo)
     conn.bind(Bar)
     schema = ml.Schema(conn)
 
     assert schema.tables == ["Foo", "Bar"]
+    assert schema.compare(models).no_missing == True
+
+
+def test_Schema_compare__detects_missing_model_def(conn):
+
+    @dcs.dataclass()
+    class Foo:
+        pass
+
+    @dcs.dataclass()
+    class Bar:
+        pass
+
+    models = MagicMock()
+    models.Foo = Foo
+
+
+    conn.bind(Foo)
+    conn.bind(Bar)
+    schema = ml.Schema(conn)
+
+    actual = schema.compare(models) # type: ml.DiffSets
+
+    assert actual.no_missing == False
+    assert "Bar" in actual.missing_definitions
+    assert actual.missing_database == set()
