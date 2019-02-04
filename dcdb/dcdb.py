@@ -872,6 +872,7 @@ class DBConnection:
 
     __slots__ = ("closed",
                  "dburl",
+                 "schema",
                  "_conn_",
                  "_tables", "tables", "t", "registry",
                  "_dirty_records", "_dirty_records_track_changes",
@@ -885,10 +886,11 @@ class DBConnection:
         PRAGMA table_info(%s)
     """
 
-    def __init__(self, dburl: str = None):
+    def __init__(self, dburl: str = None, schema_name = "main"):
 
         self.closed = False
         self.dburl = dburl
+        self.schema = schema_name
 
         if dburl is not None:
             self._conn_ = sqlite3.connect(str(dburl))
@@ -959,7 +961,9 @@ class DBConnection:
     def binds(self, *tables: [DBCommonTable], create_table: bool = True):
         return [self.bind(table, create_table=create_table) for table in tables]
 
-    def bind(self, *tables, create_table: bool = True):
+    def bind(self, *tables, create_table: bool = True, schema = "main"):
+
+        schema = schema if schema is not None else self.schema
         collect = []
         for table in tables:
             # TODO, this makes binding fragile, what if dataclasses internals change?
@@ -967,10 +971,10 @@ class DBConnection:
             if hasattr(table, "__dataclass_fields__") is False:
                 raise TypeError(f"Expected {table} to be a dataclass, missing __dataclass_fields__ attribute")
 
-            bound_class = self.registry.mk_bound_dataclass(table, table.__name__)
+            bound_class = self.registry.mk_bound_dataclass(table, table.__name__, schema=schema)
 
             if create_table:
-                bound_class._DRV.Create_table(self, bound_class, bound_class._meta_.name)
+                bound_class._DRV.Create_table(self, bound_class)
 
             collect.append(bound_class)
 
@@ -988,9 +992,11 @@ class DBConnection:
             NOTE!
             ####
 
-            It is important to note that "every" is every dataclass will have SQL tables created on
+            It is important to note that "every" is literally every dataclass, each class will have SQL tables created on
             the connection.   This can pollute a database with tables it doesn't need and are never
             used.
+
+            add the property `__NO_BIND__ = False` to skip over non-modal classes
 
         :param scope: A dictionary or module object
         :param ignore: A list (or better a set) of class names to ignore when binding the contents of scope
@@ -1065,11 +1071,11 @@ class DBRegisteredTable:
 
     def Count(self, where=None, *args, **kwargs):
         kwargs['params'] = "COUNT(*)"
-        cursor = self._DRV.Select(self.connection, self.table_name, where, *args, columns="COUNT(*)")
+        cursor = self._DRV.Select(self.connection, self.bound_cls, where, *args, columns="COUNT(*)")
         return cursor.fetchone()[0]
 
     def Update(self, where, **values):
-        return DBSQLOperations.Update(self.connection, self.table_name, self.fields, where, **values)
+        return DBSQLOperations.Update(self.connection, self.bound_cls, self.fields, where, **values)
 
 
 class DBSQLOperations:
@@ -1078,7 +1084,7 @@ class DBSQLOperations:
     """
 
     @classmethod
-    def Create_table(cls, connection, table_cls, table_name, safeguard_if_not_exists: bool = True):
+    def Create_table(cls, connection, table_cls, safeguard_if_not_exists: bool = True):
         """
             table_definitions - None column definitions like foreign keys and constraints
 
@@ -1104,8 +1110,10 @@ class DBSQLOperations:
         if table_definitions:
             body_elements += [str(td) for td in table_definitions.values()]
 
-        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} {table_name} ({", ".join(
-            body_elements)})"""
+        sql = f"""CREATE TABLE {"IF NOT EXISTS" if safeguard_if_not_exists else ""} 
+                {table_cls._meta_.schema_table} 
+                ({", ".join(body_elements)})
+        """.strip()
 
         try:
             return connection.execute(sql)
@@ -1163,11 +1171,12 @@ class DBSQLOperations:
         return sql_column
 
     @classmethod
-    def Insert(cls, cursor, table_name, dc_fields, **column_fields):
+    def Insert(cls, cursor, tbl_cls, **column_fields):
 
+        dc_fields = tbl_cls._meta_.fields
         if column_fields:
             keys = list(column_fields.keys())
-            sql = [f"INSERT INTO {table_name}",
+            sql = [f"INSERT INTO {tbl_cls._meta_.schema_table}",
                    "(", ", ".join(keys), ")"
                                          "VALUES",
                    "(", ", ".join(["?" for x in range(0, len(keys))]), ")"
@@ -1183,11 +1192,11 @@ class DBSQLOperations:
             return cursor.execute(sql, values)
 
         else:
-            sql = f""" INSERT INTO {table_name} DEFAULT VALUES"""
+            sql = f""" INSERT INTO {tbl_cls._meta_.schema_table} DEFAULT VALUES"""
             return cursor.execute(sql)
 
     @classmethod
-    def Select(cls, cursor, table_name, where=None, *where_vals, **params):
+    def Select(cls, cursor, tbl_cls, where=None, *where_vals, **params):
 
         append = []
 
@@ -1212,7 +1221,7 @@ class DBSQLOperations:
         sql = f"""
             SELECT
                 {params['columns'] if "columns" in params else '*'}
-            FROM {table_name}
+            FROM {tbl_cls._meta_.schema_table}
             {"WHERE" if where else ""}
                 {where if where else ''}
             {append}
@@ -1225,7 +1234,7 @@ class DBSQLOperations:
             return cursor.execute(sql)
 
     @classmethod
-    def Update(cls, connection, table_name, dc_fields, where, **values: dict):
+    def Update(cls, connection, tbl_cls, dc_fields, where, **values: dict):
 
         field_values = {}
         params = {k[1:]: v for k, v in values.items() if k[0] == "_"}
@@ -1243,7 +1252,7 @@ class DBSQLOperations:
 
         sql = f"""
             UPDATE
-                {table_name}
+                {tbl_cls._meta_.schema_table}
             SET
                 {", ".join([f"{k}=?" for k in field_values.keys()])}
             WHERE
@@ -1256,12 +1265,12 @@ class DBSQLOperations:
         return connection.execute(sql, list(field_values.values()) + list(where_values))
 
     @classmethod
-    def Delete(cls, connection, table_name, where: str, where_vals: list = None, limit: int = 1):
+    def Delete(cls, connection, tbl_cls, where: str, where_vals: list = None, limit: int = 1):
 
         assert where, f" Where {where!r} is empty, use '1=1' for a total table purge"
         sql = f"""
             DELETE FROM
-                {table_name}
+                {tbl_cls._meta_.schema_table}
             WHERE {where}
         """
         # TODO apparently my sqlite build does NOT have order by/limit support with DELETE
@@ -1275,7 +1284,7 @@ class DBSQLOperations:
             return connection.execute(sql)
 
     @classmethod
-    def CreateIndex(cls, connection, table_name, index_fields, index_name=None, is_unique=True):
+    def CreateIndex(cls, connection, tbl_cls, index_fields, index_name=None, is_unique=True):
         SQL = ['CREATE']
         if is_unique is True:
             SQL.append('UNIQUE')
@@ -1285,7 +1294,7 @@ class DBSQLOperations:
         if index_name is None:
             index_name = "idx_" + "_".join([field[:4] for field in index_fields])
 
-        SQL.append(f"ON {table_name}")
+        SQL.append(f"ON {tbl_cls._meta_.schema_table}")
         SQL.append(f"({','.join(index_fields)})")
         SQL = " ".join(SQL)
         return connection.execute(SQL)
@@ -1335,13 +1344,18 @@ class DBDirtyRecordMixin:
 
 
 class DBMeta:
-    __slots__ = ("connection", "name", "fields", "indexes")
+    __slots__ = ("connection", "name", "fields", "indexes", "schema")
 
-    def __init__(self, connection, name, fields, indexes):
+    def __init__(self, connection, name, fields, indexes, schema=None):
         self.connection = connection
         self.name = name
         self.fields = fields
         self.indexes = indexes
+        self.schema = schema
+
+    @property
+    def schema_table(self):
+        return f"{self.schema}.{self.name}"
 
 
 class AttrDict:
@@ -1419,7 +1433,7 @@ class DBCommonTable(DBDirtyRecordMixin):
     @classmethod
     def Select(cls, where=None, *args, **kwargs):
         cursor = cls.DB()
-        cls._DRV.Select(cursor, cls._meta_.name, where, *args, **kwargs)
+        cls._DRV.Select(cursor, cls, where, *args, **kwargs)
         return DBCursorProxy(cls, cursor)
 
     @classmethod
@@ -1429,12 +1443,12 @@ class DBCommonTable(DBDirtyRecordMixin):
     @classmethod
     def Create(cls, **kwargs):
         cursor = cls.DB()
-        cls._DRV.Insert(cursor, cls._meta_.name, cls._meta_.fields, **kwargs)
-        cls._DRV.Select(cursor, cls._meta_.name, f"id={cursor.lastrowid}")
+        cls._DRV.Insert(cursor, cls, **kwargs)
+        cls._DRV.Select(cursor, cls, f"id={cursor.lastrowid}")
         return DBCursorProxy(cls, cursor).fetchone()
 
     def delete(self):
-        cursor = self._DRV.Delete(self._meta_.connection, self._meta_.name, f"id={self.id}")
+        cursor = self._DRV.Delete(self._meta_.connection, self, f"id={self.id}")
 
         for field in dcs.fields(self):
             setattr(self, field.name, None)
@@ -1447,10 +1461,10 @@ class DBCommonTable(DBDirtyRecordMixin):
         retval = None
 
         if rec_id is not None:
-            retval = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}",
+            retval = self._DRV.Update(self._meta_.connection, self, self._meta_.fields, f"id={rec_id}",
                                       **values)
         else:
-            retval = self._DRV.Insert(self._meta_.connection, self._meta_.name, self._meta_.fields, **values)
+            retval = self._DRV.Insert(self._meta_.connection, self, self._meta_.fields, **values)
             self.id = retval.lastrowid
 
         self._dirty_reset()
@@ -1458,7 +1472,7 @@ class DBCommonTable(DBDirtyRecordMixin):
     def update(self):
         values = dcs.asdict(self)
         rec_id = values.pop("id")
-        cursor = self._DRV.Update(self._meta_.connection, self._meta_.name, self._meta_.fields, f"id={rec_id}",
+        cursor = self._DRV.Update(self._meta_.connection, self, self._meta_.fields, f"id={rec_id}",
                                   **values)
         self._dirty_reset()
         return cursor.rowcount == 1
@@ -1527,7 +1541,7 @@ class TablesRegistry:
 
         self._registry = {}
 
-    def mk_bound_dataclass(self, source_cls, name: str) -> DBCommonTable:
+    def mk_bound_dataclass(self, source_cls, name: str, schema = None) -> DBCommonTable:
         """
 
         :param source_cls: a dataclass intended to be used for working with a databasee
@@ -1554,20 +1568,21 @@ class TablesRegistry:
 
         # TODO - Figure out why __hash__ from DCCommonTable is being stripped out
         setattr(db_cls, "__hash__", lambda instance: hash(id(instance)))
-        db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields)
+        db_cls = self.ioc_assignments(db_cls, source_cls, name, db_cls_fields, schema=schema)
 
         self._registry[name] = DBRegisteredTable(self._connection, db_cls, name, db_cls._meta_.fields)
         setattr(self, name, self._registry[name])  # test to cut down on __getattr__ calls
         return db_cls
 
-    def ioc_assignments(self, db_cls: DBCommonTable, source_cls, name, db_cls_fields) -> DBCommonTable:
+    def ioc_assignments(self, db_cls: DBCommonTable, source_cls, name, db_cls_fields, schema=None) -> DBCommonTable:
 
+        assert schema is not None, f"Which database schema does {name} belong to?"
         def set_default(name, value):
             if getattr(db_cls, name, None) is None:
                 setattr(db_cls, name, value)
 
         fields = {f.name: f for f in db_cls_fields}
-        set_default("_meta_", DBMeta(self._connection, name, fields, {}))
+        set_default("_meta_", DBMeta(self._connection, name, fields, {}, schema=schema))
         set_default("tables", self)
         set_default("_original_", source_cls)
         set_default("_DRV", DBSQLOperations)
