@@ -64,6 +64,8 @@ def test_Schema_correct_manifest_with_tables(conn):
     assert schema.tables == ["Foo", "Bar"]
     assert schema.compare(models).no_missing == True
 
+    assert set(schema.tables) == schema.compare(models).present
+
 
 def test_Schema_compare__detects_missing_model_def(conn):
 
@@ -88,3 +90,49 @@ def test_Schema_compare__detects_missing_model_def(conn):
     assert actual.no_missing == False
     assert "Bar" in actual.missing_definitions
     assert actual.missing_database == set()
+    assert "Foo" in actual.present
+
+def test_Schema_compare__detects_missing_table_def(conn):
+
+    @dcs.dataclass()
+    class Foo:
+        pass
+
+    @dcs.dataclass()
+    class Bar:
+        pass
+
+    module = MagicMock()
+    module.Foo = Foo
+
+
+    conn.bind(Foo)
+    conn.bind(Bar)
+
+
+    schema = ml.Schema(conn)
+    actual = schema.compare(module) # type: ml.DiffSets
+
+    assert actual.no_missing == False
+    assert "Bar" in actual.missing_definitions
+    assert actual.missing_database == set()
+
+
+def tes_Schema_compare_model__reports_missing_columns(conn):
+
+    @dcs.dataclass()
+    class Foo:
+        pass
+
+    module = MagicMock()
+    module.Foo = conn.bind(Foo) # type: dcdb.DBCommonTable
+
+    conn.execute(f"ALTER TABLE {module.Foo._meta_.schema_table} ADD COLUMN txt_str TEXT")
+
+    schema = ml.Schema(conn)
+
+    comparison = schema.compare_model(module.Foo) # type: ml.CompareModelResult
+    assert "txt_str" in comparison.missing_model
+    assert "id" in comparison.all
+
+

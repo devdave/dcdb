@@ -21,6 +21,7 @@ class Migrator:
         pass
 
 DiffSets = namedtuple("DiffSets", "present,missing")
+CompareModelResult = namedtuple("CompareModelResult","all,missing_table, missing_model")
 
 @dcs.dataclass()
 class DiffSets:
@@ -34,6 +35,10 @@ class DiffSets:
     @property
     def missing_database(self):
         return self.in_module - self.in_database
+
+    @property
+    def present(self):
+        return self.in_module & self.in_database
 
     @property
     def no_missing(self):
@@ -50,6 +55,7 @@ class Schema:
         return [row['name'] for row in self.connection.execute("SELECT name FROM sqlite_master WHERE type='table'")]
 
 
+
     def compare(self, scope):
 
         tables = set(self.tables)
@@ -62,3 +68,24 @@ class Schema:
 
 
         return DiffSets(tables, module_names)
+
+
+    def compare_model(self, model) -> CompareModelResult:
+        model_fnames = set(model._meta_.fields.keys())
+
+        table_info = {}
+        for row in self.connection.execute(f"PRAGMA table_info({model._meta_.schema_name})"):
+            table_info[row['name']] = {k:row[k] for k in row.keys()}
+
+        table_fnames = set(table_info.keys())
+
+        all_known = table_fnames | model_fnames
+        table_missing = table_fnames - model_fnames
+        model_missing = model_fnames - table_fnames
+
+
+        return CompareModelResult(all_known, table_missing, model_missing)
+
+
+
+
