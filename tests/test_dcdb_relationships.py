@@ -103,9 +103,15 @@ def test_RelationshipFields_DOT_unordered_list__works(connection: dcdb.DBConnect
 
     box = connection.t.Box()
     box.contents.create(name="Nails", quantity=300)
-    box.contents.create(name="Hammer", quantity=1)
+    box.contents.create(name="Hammer", quantity=2)
     box.contents.create(name="Measuring tape", quantity=1)
-    box.contents.create(name="Bandaids", quantity=0)
+    box.contents.create(name="Bandaids", quantity=25)
+
+    many_widgets = box.contents.where("quantity > ?", 1 ) # type: dcdb.DBCursorProxy
+    alot_widgets = box.contents.where("quantity >= ?", 25) # type: dcdb.DBCursorProxy
+
+    assert len(list(many_widgets)) == 3
+    assert len(list(alot_widgets.fetchall())) == 2
 
     # NOTE relying heavily on order of inserts
     assert box.contents[1].name == "Hammer"
@@ -131,7 +137,7 @@ def test_RelationshipFields_DOT_unordered_list__works(connection: dcdb.DBConnect
     assert box.contents[1].name == "Bandaids"
 
     bandaids = box.contents.pop(1)
-    assert bandaids.quantity == 0
+    assert bandaids.quantity == 25
     assert len(box.contents) == 1
     assert connection.t.Widget.Count() == 3
 

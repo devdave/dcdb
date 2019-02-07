@@ -452,9 +452,27 @@ class ListSelect(collections.abc.Sequence):
 
     @property
     def _where(self):
+
+
+
         return f"{self.relationship_field}=?" \
             if self.__where is None \
             else f"{self.relationship_field}=? AND {self.__where}"
+
+    def where(self, clause, *args, offset=None, limit=None):
+
+        try:
+            original_where = self.__where
+            self.__where = clause
+
+            return self.child_cls.Select(self._where
+                                         , self.parent[self.parent_join_field]
+                                         , *args
+                                         , limit_offset=offset
+                                         , limit_count=limit)
+        finally:
+            self.__where = original_where
+
 
     def __get__(self, instance, owner):
         if instance is None:
