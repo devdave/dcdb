@@ -1398,6 +1398,7 @@ class DBCommonTable(DBDirtyRecordMixin):
 
     id: int  # TODO should I make this an initvar?
 
+    _meta_ = None # type: DBMeta
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
