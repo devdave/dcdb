@@ -363,7 +363,7 @@ class FieldJSON(AbstractTransformedClass):
 
     @classmethod
     def To(cls, value, value_type):
-        return json.dumps(value)
+        return value if isinstance(value, str) else json.dumps(value)
 
 
 class Fields:

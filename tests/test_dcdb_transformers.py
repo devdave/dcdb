@@ -155,6 +155,34 @@ def test_FieldPickled_AND_FieldJSON__works_as_expected(connection):
     assert record3.blank == expected_json
 
 
+def test_FieldJSON__works_when_assigned_raw_string(connection):
+
+    import json
+
+    @dataclass()
+    class Thing:
+        widget: dcdb.FieldJSON = None
+
+    connection.bind(Thing)
+
+    actual = dict(foo="bar", nums=123, complex={"a":2, "123":"abc"})
+    raw_actual = json.dumps(actual)
+
+    record = connection.t.Thing(widget=raw_actual)
+    assert record.widget == actual
+
+
+def test_FieldJSON__works_when_is_set_to_None(connection):
+    @dataclass()
+    class Thing:
+        widget: dcdb.FieldJSON = None
+
+    connection.bind(Thing)
+
+    record = connection.t.Thing(widget=None)
+    assert record.widget == None
+
+
 
 def test_Transformers_AND_Datetime_dot_date():
     actual_date = dt.date(2018, 3, 5)
