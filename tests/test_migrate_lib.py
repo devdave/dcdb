@@ -118,7 +118,7 @@ def test_Schema_compare__detects_missing_table_def(conn):
     assert actual.missing_database == set()
 
 
-def tes_Schema_compare_model__reports_missing_columns(conn):
+def test_Schema_compare_model__reports_missing_columns(conn):
 
     @dcs.dataclass()
     class Foo:
@@ -135,4 +135,25 @@ def tes_Schema_compare_model__reports_missing_columns(conn):
     assert "txt_str" in comparison.missing_model
     assert "id" in comparison.all
 
+
+def test_Schema_add_Column(conn):
+    @dcs.dataclass()
+    class Foo:
+        pass
+
+    module = MagicMock()
+    conn.bind(Foo)  # type: dcdb.DBCommonTable
+
+    @dcs.dataclass()
+    class Foo:
+        txt_str: None
+
+    module.Foo = conn.bind(Foo, create_table=False)
+
+    schema = ml.Schema(conn)
+
+    comparison = schema.compare_model(module.Foo)  # type: ml.CompareModelResult
+    assert "txt_str" in comparison.missing_table
+    assert comparison.missing_model == set()
+    assert "id" in comparison.all
 

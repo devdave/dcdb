@@ -21,7 +21,11 @@ class Migrator:
         pass
 
 DiffSets = namedtuple("DiffSets", "present,missing")
-CompareModelResult = namedtuple("CompareModelResult","all,missing_table, missing_model")
+CompareModelResult = namedtuple("CompareModelResult","all, missing_table, missing_model")
+
+class MISSING:
+    #taking a page from dataclasses
+    pass
 
 @dcs.dataclass()
 class DiffSets:
@@ -74,18 +78,32 @@ class Schema:
         model_fnames = set(model._meta_.fields.keys())
 
         table_info = {}
-        for row in self.connection.execute(f"PRAGMA table_info({model._meta_.schema_name})"):
+        sql = f"PRAGMA table_info({model._meta_.name})"
+        for row in self.connection.execute(sql):
             table_info[row['name']] = {k:row[k] for k in row.keys()}
 
         table_fnames = set(table_info.keys())
 
         all_known = table_fnames | model_fnames
-        table_missing = table_fnames - model_fnames
-        model_missing = model_fnames - table_fnames
+        table_missing = model_fnames - table_fnames
+        model_missing = table_fnames - model_fnames
 
 
         return CompareModelResult(all_known, table_missing, model_missing)
 
 
+    def add_column(self, model, column_name, column_type, default_val = MISSING ):
+
+        assert column_name in model._meta_.fields.keys()
+        assert column_name not in self.compare_model(model).missing_model
+
+        if default_val is MISSING:
+            self.connection.execute("ALTER TABLE {model._meta_.schema_name} ADD COLUMN {column_name} {column_type} NOT NULL")
+        else:
+            if default_val is None:
+                default_val = "null"
+
+            self.connection.execute(
+                "ALTER TABLE {model._meta_.schema_name} ADD COLUMN {column_name} {column_type} DEFAULT {default_val}")
 
 
