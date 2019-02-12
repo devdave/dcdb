@@ -184,13 +184,6 @@ def test_FieldJSON__works_when_is_set_to_None(connection):
 
 
 
-def test_Transformers_AND_Datetime_dot_date():
-    actual_date = dt.date(2018, 3, 5)
-    actual_date_str = "2018-03-05"
-    assert dcdb.Transformers.To(actual_date, dt.date) == actual_date_str
-    assert dcdb.Transformers.To(actual_date_str, dt.date) == actual_date_str
-
-    assert dcdb.Transformers.From(actual_date_str, dt.date) == actual_date
 
 
 def test_Transformers__handles_decimal():

@@ -482,29 +482,6 @@ def test_dcdb__cast_to_database_AND_cast_from_database___column_as_enum(connecti
 
 
 
-def test_DefaultLocalTime___allow_default_time(connection):
-
-    import datetime
-
-    @dataclass()
-    class ThatTime:
-        created_on: dcdb.DefaultLocalTime() = dcdb.DefaultLocalTime.ColDef
-
-    connection.bind(ThatTime)
-
-
-    now = datetime.datetime.now()
-    created_now = connection.t.ThatTime()
-
-    assert created_now.created_on.year == now.year
-    assert created_now.created_on.month == now.month
-    assert created_now.created_on.day == now.day
-    assert created_now.created_on.hour == now.hour
-    assert now.minute+1 > created_now.created_on.minute > now.minute - 1
-
-
-
-
 def main():
     import sys
     import pathlib as pl
