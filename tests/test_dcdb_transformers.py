@@ -180,3 +180,29 @@ def test_Transformers__handles_decimal():
     assert dcdb.Transformers.To(actual, decimal.Decimal) == to_val
 
 
+def test_dcdb__cast_to_database_AND_cast_from_database___column_as_enum(connection):
+    import enum
+
+    class EnumFlags(enum.Enum):
+        OFF = 0
+        ON = 1
+
+        @classmethod
+        def To(cls, value, _):
+            return value.name
+
+        @classmethod
+        def From(cls, value, _):
+            return cls.__members__[value]
+
+    @dataclass()
+    class Test:
+        enum_column: EnumFlags = EnumFlags.OFF
+
+    connection.bind(Test)
+    default_record = connection.t.Test()
+    off_record = connection.t.Test(enum_column=EnumFlags.OFF)
+    on_record = connection.t.Test(enum_column=EnumFlags.ON)
+
+    assert off_record.enum_column == EnumFlags.OFF
+    assert on_record.enum_column == EnumFlags.ON
