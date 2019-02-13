@@ -63,26 +63,7 @@ def test_dcdb_cast_to_database_type__fix_ordering_error():
     assert value == result
 
 
-def test_dcdb__cast_to_database_AND_cast_from_database__handle_datetime(connection):
-    import datetime
 
-    @dataclass()
-    class TimePiece:
-        a_date: datetime.date
-        a_time: datetime.time
-        a_datetime: datetime.datetime
-
-    connection.bind(TimePiece)
-
-    test_datetime = datetime.datetime(1955, 11, 5, 11, 10, 54, 67345)
-    test_date = datetime.date(1941, 12, 7)
-    test_time = datetime.time(10, 20, 11)
-
-    record = connection.t.TimePiece(a_date=test_date, a_datetime=test_datetime, a_time=test_time)
-
-    assert record.a_date == test_date
-    assert record.a_time == test_time
-    assert record.a_datetime == test_datetime
 
 
 def test_FieldPickled__AND__dcdb_cast_to_database___works():
