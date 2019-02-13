@@ -343,12 +343,13 @@ def test_DBCommonTable_Update__bulk_update(conn2):
 
 def test_DBCommonTable_hashing_equals(conn2):
     record1 = conn2.t.Widget(name="Alice", age=35, panacea=False)
-    record2 = conn2.t.Widget.Get("name=?", "Alice")
-    record3 = conn2.t.Widget.Get("age=?", 35)
-    assert record1.id == record2.id
-    assert record1 == record2
-    assert record2 == record3
-    assert record3 == record1
+    record1_copy1 = conn2.t.Widget.Get("name=?", "Alice")
+    record1_copy2 = conn2.t.Widget.Get("age=?", 35)
+
+    assert record1.id == record1_copy1.id
+    assert record1 == record1_copy1
+    assert record1_copy1 == record1_copy2
+    assert record1_copy2 == record1
 
     @dataclass()
     class Foo:
@@ -356,15 +357,17 @@ def test_DBCommonTable_hashing_equals(conn2):
         width: int
 
     conn2.bind(Foo)
-    record4 = conn2.t.Foo(height=12, width=22)
-    record5 = conn2.t.Foo.Get("height=?", 12)
-    record6 = conn2.t.Foo.Get("width=?", 22)
-    assert record4 != record1
-    assert record5 != record2
-    assert record6 != record3
-    assert record6 == record4
-    assert record4 == record5
-    assert record5 != record3
+
+    record2 = conn2.t.Foo(height=12, width=22)
+    record2_copy1 = conn2.t.Foo.Get("height=?", 12)
+    record2_copy2 = conn2.t.Foo.Get("width=?", 22)
+
+    assert record2 != record1
+    assert record2 != record1_copy1
+    assert record2_copy1 != record1_copy2
+    assert record2_copy2 == record2
+    assert record2_copy1 == record2_copy2
+
 
 
 def test_DBTableRegistry___works(connection):
