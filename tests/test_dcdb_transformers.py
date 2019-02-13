@@ -175,4 +175,8 @@ def test_Transformers__handles_decimal():
     actual = 1.0
     to_val = "1.0"
 
-    assert dcdb
+    assert dcdb.Transformers.Has(decimal.Decimal) is True
+    assert dcdb.Transformers.From(to_val, decimal.Decimal) == actual
+    assert dcdb.Transformers.To(actual, decimal.Decimal) == to_val
+
+
