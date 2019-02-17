@@ -1610,6 +1610,7 @@ class TablesRegistry:
         fields = {f.name: f for f in db_cls_fields}
         set_default("_meta_", DBMeta(self._connection, name, fields, {}, schema=schema))
         set_default("tables", self)
+        set_default("t", self)
         set_default("_original_", source_cls)
         set_default("_DRV", DBSQLOperations)
 
