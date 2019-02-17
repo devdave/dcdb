@@ -601,6 +601,13 @@ class DictSelect(collections.abc.MutableMapping):
 
         return self
 
+    def __contains__(self, item):
+        record = self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"
+                                 f" AND {self.name_field}=?", item
+                                 , order_by=self.by_order).fetchone()
+
+        return record is not None
+
     def __getitem__(self, key):
         return self.child.Select(f"{self.relationship_field}={self.parent[self.parent_join_field]}"
                                  f" AND {self.name_field}=?", key
