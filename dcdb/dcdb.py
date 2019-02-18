@@ -131,7 +131,25 @@ LOG = logging.getLogger(__name__)
 # Avoid application code from having to import sqlite3
 IntegrityError = sqlite3.IntegrityError
 
+@dcs.dataclass
+class ColumnDef:
+    database: str
+    python: object = None
 
+    def From(self, intermediate):
+        return intermediate
+
+    def To(self, intermediate):
+        return intermediate
+
+
+@dcs.dataclass
+class TableDef:
+    """
+        Used during the construction/create table phase to
+        add index/constraints after column definitions.
+    """
+    pass
 
 
 
