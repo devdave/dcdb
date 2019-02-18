@@ -250,7 +250,7 @@ class DefaultLocalTime(TransformDatetimeType):
     #    "TIMESTAMP DEFAULT (strftime('%Y-%m-%d T%H:%M','now','localtime'))")
 
     FormatStr = "%Y-%m-%d T%H:%M:%S"
-    ColDef = f"TIMESTAMP DEFAULT (strftime('{FormatStr}','now','localtime'))"
+    ColDef = ColumnDef(f"TIMESTAMP DEFAULT (strftime('{FormatStr}','now','localtime'))")
 
     def __init__(self):
         super().__init__(dt.datetime, self.FormatStr)
@@ -883,26 +883,6 @@ class _RelationshipFields:
 
 RelationshipFields = _RelationshipFields()
 
-
-@dcs.dataclass
-class ColumnDef:
-    database: str
-    python: object = None
-
-    def From(self, intermediate):
-        return intermediate
-
-    def To(self, intermediate):
-        return intermediate
-
-
-@dcs.dataclass
-class TableDef:
-    """
-        Used during the construction/create table phase to
-        add index/constraints after column definitions.
-    """
-    pass
 
 
 class DBConnection:
