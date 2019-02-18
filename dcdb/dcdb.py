@@ -1427,14 +1427,6 @@ class DBCommonTable(DBDirtyRecordMixin):
             value = cast_from_database(orig_value, field.type)
             super().__setattr__(field.name, value)
 
-        if hasattr(self, "_relationships"):
-            raise DeprecationWarning("Remove from code, no longer used")
-            # rels = AttrDict()
-            # self._relationships(rels)
-            # for name, handler in rels.contents.items():
-            #     handler.set_owner(self)
-            #     setattr(self, name, handler)
-
 
         self._init_dirty_record_tracking_()
 
