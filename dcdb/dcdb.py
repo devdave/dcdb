@@ -1330,6 +1330,7 @@ class DBDirtyRecordMixin:
     def _init_dirty_record_tracking_(self):
         self._dirty_record = False
         self._dirty_record_ignore = True
+        self._locked = True
 
     def __hash__(self):
         """
@@ -1363,6 +1364,9 @@ class DBDirtyRecordMixin:
     def __setattr__(self, key, value):
         if key in self._meta_.fields:
             self._set_dirty(key, value)
+
+        if getattr(self, "_locked", False) is True and key not in self._meta_.fields:
+            raise ValueError(f"Record is locked, trying to set {key} when not in fields: {self._meta_.fields.keys()}")
 
         super().__setattr__(key, value)
         return value
