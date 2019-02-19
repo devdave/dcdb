@@ -112,9 +112,21 @@ def test_TransformDatetimeType__works(connection):
         day: dcdb.TransformDatetimeType(dt.date, "%Y-%m-%d") = None # type: dt.date
         handm: dcdb.TransformDatetimeType(dt.time, "%H:%M:%S") = None # type: dt.time
 
+
     connection.bind(Foo)
 
     foo_tbl = connection.t.Foo # type: Foo
+
+    v = foo_tbl(handm = dt.time(3,22,38))
+    assert v.handm.hour == 3
+    assert v.handm.minute == 22
+    assert v.handm.second == 38
+
+    w = foo_tbl(day="2020-11-13")
+
+    assert w.day.year == 2020
+    assert w.day.month == 11
+    assert w.day.day == 13
 
     x = foo_tbl() # type: Foo
     x_id = x.id
