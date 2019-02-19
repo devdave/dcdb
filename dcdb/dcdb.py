@@ -1591,6 +1591,8 @@ class TablesRegistry:
         for field in db_cls_fields:
             try:
                 field.type = eval_type(field.type)
+            except TypeError as ex:
+                raise TypeError(f"Bad column type {field.type!r} for {field.name!r} on {name!r} - {ex}")
             except NameError as ex:
                 raise NameError(f"Bad column type {field.type!r} for {field.name!r} on {name!r} class table")
 
