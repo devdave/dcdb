@@ -239,8 +239,18 @@ class TransformDatetimeType(AbstractTransformedClass):
         self.container = container
         self.format = format
 
-    def From(self, value: typing.Any, transform_type: typing.Union[type, object]):
-        return self.container.strptime(str(value), self.format)
+    def From(self, value: typing.Any, transform_type: typing.Union[dt.datetime, dt.date, dt.time]):
+        if value is None:
+            return dt.datetime(0,0,0,0,0,0)
+
+        retval = dt.datetime.strptime(str(value), self.format)
+
+        if transform_type.container == dt.date:
+            retval = retval.date()
+        elif transform_type.container == dt.time:
+            retval = retval.time()
+
+        return retval
 
     def To(self, value: typing.Any, transform_type: typing.Union[type, object]):
         return value if isinstance(value, str) else value.strftime(self.format)
