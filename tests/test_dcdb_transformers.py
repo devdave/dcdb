@@ -102,8 +102,48 @@ def test_dcdb__cast_to_database():
     assert expected == actual
 
 
-def test_TransformType__works(connection):
-    pass
+def test_TransformDatetimeType__works(connection):
+
+    import datetime as dt
+
+    @dataclass()
+    class Foo:
+        daytime: dcdb.TransformDatetimeType(dt.datetime, "%Y-%m-%d T%H:%M:%S") = None # type: dt.datetime
+        day: dcdb.TransformDatetimeType(dt.date, "%Y-%m-%d") = None # type: dt.date
+        handm: dcdb.TransformDatetimeType(dt.time, "%H:%M:%S") = None # type: dt.time
+
+    connection.bind(Foo)
+
+    foo_tbl = connection.t.Foo # type: Foo
+
+    x = foo_tbl() # type: Foo
+    x_id = x.id
+
+    assert x.daytime is None
+    assert x.day is None
+    assert x.handm is None
+
+    x.daytime = dt.datetime(1999,1,1,1,10,30)
+    x.save()
+
+
+    y = foo_tbl.Get("id=?", x_id) # type: Foo
+    assert y.daytime.hour == 1
+    assert y.daytime.year == 1999
+    assert y.daytime.second == 30
+
+    y.handm = dt.time(11,55,33)
+    y.save()
+
+    z = foo_tbl.Get("id=?", x_id) # type: Foo
+    assert z.handm.hour == 11
+    assert z.handm.minute == 55
+    assert z.handm.second == 33
+
+
+
+
+
 
 
 def test_FieldPickled_AND_FieldJSON__works_as_expected(connection):
