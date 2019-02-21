@@ -487,6 +487,33 @@ class ListSelect(collections.abc.Sequence):
             if self.__where is None \
             else f"{self.relationship_field}=? AND {self.__where}"
 
+    def sum(self, sum_field, where = None, *args, default=None):
+        where_sql = None
+        args = [self.parent[self.parent_join_field], *args]
+
+        where_sql = None
+        if where is not None:
+            if self._where is not None:
+                where_sql = " AND ".join([self._where, where])
+            else:
+                where_sql = " AND ".join([where])
+        elif self._where is not None:
+            where_sql = " AND ".join([self._where])
+
+        record = None
+        column = f"SUM({sum_field})"
+        if where_sql:
+            record = self.child_cls.Select(where_sql, *args, columns=column)
+        else:
+            record = self.child_cls.Select(columns=column)
+
+        result = record.fetchone(direct_record=True)
+        if result is None:
+            return default
+        else:
+            return result[0]
+
+
     def where(self, clause, *args, offset=None, limit=None):
 
         try:
