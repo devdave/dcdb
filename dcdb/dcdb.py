@@ -814,6 +814,11 @@ class LeftNamedMultiJoin(collections.abc.MutableMapping):
         assert key == child_record[self.child_name_field]
         join_record = self.join_table.cls(**kwargs)
 
+    def insert(self, *records):
+        for record in records:
+            self[record[self.child_name_field]] = record
+
+
     def __iadd__(self, other: [DBCommonTable]):
         for record in other:
             self[record[self.child_name_field]] = record

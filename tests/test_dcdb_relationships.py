@@ -423,13 +423,13 @@ def test_RelationshipFields_DOT_unordered_list___works_and_replaces_AutoList(con
 
     result = bob.Pending
     assert len(result) == 0
-    bob.Pending += [steve, stjr, joe, joejr]
+    bob.Pending.insert(steve, stjr, joe, joejr)
     assert len(bob.Pending) == 4
     bob.Pending.pop(joe)
     assert len(bob.Pending) == 3
     assert len(bob.Steves) == 2
 
-    bob.Complete += [carl, alice, smith]
+    bob.Complete.insert(carl, alice, smith)
     assert len(bob.Complete) == 3
     bob.Complete.remove(alice)
     assert len(bob.Complete) == 2
