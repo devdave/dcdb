@@ -465,3 +465,40 @@ def test_RelationshipFields_DOT_unordered_list__dotted_relations(connection):
     for employee in boss.employees:
         assert employee in [emp1, emp2, emp3]
         assert employee not in [emp4]
+
+
+def test_RelationshipFields_DOT_unordered_list__sum_field(connection):
+
+
+    @dataclass()
+    class Account:
+        pass
+        invoices = dcdb.RelationshipFields.unordered_list("Invoice.acct_id")
+
+    @dataclass()
+    class Invoice:
+        acct_id: int
+        amount: int
+
+
+    connection.bind(Account)
+    connection.bind(Invoice)
+
+    neg_amounts = [-330, -12]
+    pos_amounts = [123,789,1034]
+
+    amounts = [*neg_amounts, *pos_amounts]
+    amount_sum = sum(amounts)
+    neg_sum = sum(neg_amounts)
+    pos_sum = sum(pos_amounts)
+
+    acct = connection.t.Account()
+
+    for amt in amounts:
+        acct.invoices.create(amount=amt)
+
+    assert len(acct.invoices) == 5
+
+    assert acct.invoices.sum("amount") == amount_sum
+    assert acct.invoices.sum("amount", "amount > 0") == pos_sum
+    assert acct.invoices.sum("amount", "amount < 0") == neg_sum
