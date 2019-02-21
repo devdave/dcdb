@@ -482,7 +482,6 @@ class ListSelect(collections.abc.Sequence):
     def _where(self):
 
 
-
         return f"{self.relationship_field}=?" \
             if self.__where is None \
             else f"{self.relationship_field}=? AND {self.__where}"
