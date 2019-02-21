@@ -1519,11 +1519,14 @@ class DBCursorProxy:
         self._factory = factory
         self._cursor = cursor
 
-    def fetchone(self) -> DBCommonTable:
+    def fetchone(self, direct_record=False) -> DBCommonTable:
         row = self._cursor.fetchone()
         if row is None: return None
 
-        return self._factory(**row) if row is not None else None
+        if direct_record is True:
+            return row
+        else:
+            return self._factory(**row) if row is not None else None
 
     def fetchmany(self, size=100) -> DBCommonTable:
         # todo figure out why , size=sqlite3.Cursor.arraysize is a member descriptor (sign of a bad slots somewhere)
