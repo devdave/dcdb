@@ -286,8 +286,8 @@ def test_RelationshipFields_Named_Left_Join__works(connection):
     bits = connection.t.Thing(name="Bits", quantity=12, material="carbon steel")
     tape = connection.t.Thing(name="Tape", quantity=1, material="Plastic")
 
-    toolbox.things += [hammers, nails, screwdriver]
-    storagebox.things += [screwdriver, bits, tape]
+    toolbox.things.insert(hammers, nails, screwdriver)
+    storagebox.things.insert(screwdriver, bits, tape)
 
     assert hammers in toolbox.things
     assert hammers not in storagebox.things

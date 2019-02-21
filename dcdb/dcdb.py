@@ -598,9 +598,10 @@ class ListSelect(collections.abc.Sequence):
     def __len__(self):
         return self.child_cls.Count(self._where, self.parent[self.parent_join_field])
 
-    def insert(self, record: DBCommonTable):
-        record[self.relationship_field] = self.parent[self.parent_join_field]
-        record.save()
+    def insert(self, *records: DBCommonTable):
+        for record in records:
+            record[self.relationship_field] = self.parent[self.parent_join_field]
+            record.save()
 
     def create(self, **kwargs):
         kwargs[self.relationship_field] = self.parent[self.parent_join_field]
